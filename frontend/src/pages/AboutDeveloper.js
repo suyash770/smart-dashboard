@@ -63,15 +63,14 @@ export default function AboutDeveloper() {
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
                     {/* Avatar */}
                     <div className="relative group">
-                        <div className="w-32 h-32 rounded-2xl flex items-center justify-center flex-shrink-0
-                            shadow-xl transition-transform duration-300 group-hover:scale-105"
-                            style={{
-                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)',
-                            }}>
-                            <span className="text-5xl font-bold text-white select-none"
-                                style={{ textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
-                                SG
-                            </span>
+                        <div className="w-32 h-32 rounded-2xl flex-shrink-0 overflow-hidden
+                            shadow-xl transition-transform duration-300 group-hover:scale-105
+                            border-2 border-indigo-500/30">
+                            <img
+                                src="/developer.png"
+                                alt="Suyash Gupta"
+                                className="w-full h-full object-cover"
+                            />
                         </div>
                         {/* Online indicator */}
                         <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full
