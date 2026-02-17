@@ -4,22 +4,13 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const corsOptions = {
-    origin: [
-        'http://localhost:3000',
-        'https://smart-dashboard-silk.vercel.app',
-        'https://smartdash-ai.onrender.com',
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-};
-
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
-app.use(cors(corsOptions));
+app.use(cors({
+    origin: process.env.FRONTEND_URL
+        ? [process.env.FRONTEND_URL, 'http://localhost:3000']
+        : '*',
+    credentials: true
+}));
 app.use(express.json({ limit: '2mb' }));
-
 
 const dataRoutes = require('./routes/dataRoutes');
 const authRoutes = require('./routes/authRoutes');
