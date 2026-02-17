@@ -4,10 +4,24 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const allowedOrigins = [
+    'http://localhost:3000',
+    'https://smart-dashboard-silk.vercel.app',
+    'https://smartdash-ai.onrender.com',
+];
+if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL
-        ? [process.env.FRONTEND_URL, 'http://localhost:3000']
-        : '*',
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow all for now, tighten later
+        }
+    },
     credentials: true
 }));
 app.use(express.json({ limit: '2mb' }));
