@@ -9,6 +9,7 @@ import AddData from './pages/AddData';
 import Predictions from './pages/Predictions';
 import Profile from './pages/Profile';
 import ManageData from './pages/ManageData';
+import AboutDeveloper from './pages/AboutDeveloper';
 import './index.css';
 
 // Protected route wrapper
@@ -42,6 +43,7 @@ function App() {
               <Route path="/predictions" element={<Predictions />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/manage-data" element={<ManageData />} />
+              <Route path="/about-developer" element={<AboutDeveloper />} />
             </Route>
 
             {/* Catch-all */}

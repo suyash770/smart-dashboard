@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, PlusCircle, BrainCircuit, LogOut,
-    ChevronLeft, ChevronRight, Activity, UserCircle, List
+    ChevronLeft, ChevronRight, Activity, UserCircle, List, Code2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,6 +17,7 @@ export default function Sidebar() {
         { path: '/manage-data', label: 'Manage Data', icon: List },
         { path: '/predictions', label: 'Predictions', icon: BrainCircuit },
         { path: '/profile', label: 'Profile', icon: UserCircle },
+        { path: '/about-developer', label: 'Developer', icon: Code2 },
     ];
 
     const handleLogout = () => {
