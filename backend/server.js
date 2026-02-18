@@ -77,6 +77,10 @@ const connectDB = async () => {
 
 connectDB();
 
+// Start Cron Jobs
+const startCronJobs = require('./cron');
+startCronJobs();
+
 const Data = require('./models/Data'); // Ensure Data model is imported
 
 app.get('/', (req, res) => {
