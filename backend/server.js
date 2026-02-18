@@ -16,6 +16,8 @@ app.use(express.json({ limit: '2mb' }));
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
+app.set('trust proxy', 1); // Required for Render/Heroku to trust the proxy and set secure cookies
+
 app.use(session({
     secret: process.env.JWT_SECRET || 'smartdashboard_secret',
     resave: false,
@@ -27,8 +29,8 @@ app.use(session({
     cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // true in production
-        sameSite: 'lax'
+        secure: process.env.NODE_ENV === 'production', // true required for SameSite: None
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Cross-site cookie
     }
 }));
 
