@@ -63,13 +63,13 @@ export default function AboutDeveloper() {
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
                     {/* Avatar */}
                     <div className="relative group">
-                        <div className="w-32 h-32 rounded-2xl flex-shrink-0 overflow-hidden
+                        <div className="w-48 h-64 rounded-2xl flex-shrink-0 overflow-hidden
                             shadow-xl transition-transform duration-300 group-hover:scale-105
                             border-2 border-indigo-500/30">
                             <img
                                 src="/new dev img.png"
                                 alt="Suyash Gupta"
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover object-top"
                             />
                         </div>
                         {/* Online indicator */}
