@@ -166,9 +166,7 @@ export default function AboutDeveloper() {
             {/* Footer credit */}
             <div className="glass-card rounded-2xl p-5 text-center">
                 <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
-                    <span>Built with</span>
-                    <Heart className="w-3 h-3 text-red-400 fill-red-400" />
-                    <span>by</span>
+                    <span>Developed by</span>
                     <span className="text-indigo-400 font-semibold">Suyash Gupta</span>
                     <span>•</span>
                     <span>SmartDash © {new Date().getFullYear()}</span>

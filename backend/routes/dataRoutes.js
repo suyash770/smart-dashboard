@@ -1,7 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Data = require('../models/Data');
+const Alert = require('../models/Alert');
+const Notification = require('../models/Notification');
 const { protect } = require('../middleware/authMiddleware');
+const multer = require('multer');
+const axios = require('axios');
+const FormData = require('form-data');
+
+// Configure upload (memory storage for proxying)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Reusable helper: call AI engine (supports http & https via env)
 const callAIEngine = (path, payload) => {
@@ -51,6 +59,16 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
+// GET all unique categories for the logged-in user
+router.get('/categories', protect, async (req, res) => {
+    try {
+        const categories = await Data.distinct('category', { user: req.user._id });
+        res.json(categories);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // POST new data (for the logged-in user)
 router.post('/add', protect, async (req, res) => {
     const newData = new Data({
@@ -62,6 +80,28 @@ router.post('/add', protect, async (req, res) => {
 
     try {
         const savedData = await newData.save();
+
+        // CHECK ALERTS
+        try {
+            const alerts = await Alert.find({ user: req.user._id, category: req.body.category, active: true });
+
+            for (const alert of alerts) {
+                let triggered = false;
+                if (alert.condition === 'gt' && req.body.value > alert.threshold) triggered = true;
+                if (alert.condition === 'lt' && req.body.value < alert.threshold) triggered = true;
+
+                if (triggered) {
+                    await Notification.create({
+                        user: req.user._id,
+                        message: `🚨 Alert: ${req.body.category} is ${alert.condition === 'gt' ? 'above' : 'below'} ${alert.threshold} (Value: ${req.body.value})`,
+                        relatedAlert: alert._id
+                    });
+                }
+            }
+        } catch (alertErr) {
+            console.error('Alert check failed:', alertErr.message);
+        }
+
         res.status(201).json(savedData);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -102,6 +142,64 @@ router.delete('/:id', protect, async (req, res) => {
         await Data.findByIdAndDelete(req.params.id);
         res.json({ message: 'Entry deleted' });
     } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// POST file upload for prediction
+router.post('/predict/upload', protect, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        const aiUrl = process.env.AI_ENGINE_URL || 'http://127.0.0.1:5001';
+
+        // Prepare form data for AI Engine
+        const form = new FormData();
+        form.append('file', req.file.buffer, {
+            filename: req.file.originalname,
+            contentType: req.file.mimetype
+        });
+
+        // Send to AI Engine
+        const aiResponse = await axios.post(`${aiUrl}/predict-from-file`, form, {
+            headers: {
+                ...form.getHeaders()
+            }
+        });
+
+        res.json(aiResponse.data);
+
+        // CHECK ALERTS FOR UPLOADED DATA
+        try {
+            const uploadedData = aiResponse.data.original_data || [];
+            if (uploadedData.length > 0) {
+                // Get all active alerts for this user
+                const alerts = await Alert.find({ user: req.user._id, active: true });
+                const notificationsToCreate = [];
+
+                // Optimization: Group data by category if possible, but file upload might not have categories.
+                // Assuming file upload data maps to a default category or we just check value thresholds?
+                // The current file upload parser doesn't extract 'category', just label/value.
+                // So we might skip category-specific alerts OR default to 'General'.
+                // Let's assume 'General' for now or skip if category doesn't match.
+
+                // Actually, the user might want to check ALL values against a threshold regardless of category?
+                // The Alert model REQUIRES a category.
+                // Let's omit this for now since we don't know the category of the uploaded file data.
+                // OR we could allow the user to specify category in the upload form.
+                // For MVP, we will skip alert generation for file uploads to avoid noise/errors.
+            }
+        } catch (err) {
+            console.error('File upload alert check failed', err);
+        }
+
+    } catch (err) {
+        // Handle AI Engine errors
+        if (err.response) {
+            return res.status(err.response.status).json(err.response.data);
+        }
         res.status(500).json({ message: err.message });
     }
 });

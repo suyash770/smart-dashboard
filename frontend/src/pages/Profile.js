@@ -12,6 +12,39 @@ export default function Profile() {
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
 
+    // Password state
+    const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+    const [passLoading, setPassLoading] = useState(false);
+    const [passError, setPassError] = useState('');
+    const [passSuccess, setPassSuccess] = useState('');
+
+    const handlePasswordUpdate = async (e) => {
+        e.preventDefault();
+        setPassError('');
+        setPassSuccess('');
+        if (passwords.new !== passwords.confirm) {
+            setPassError("New passwords don't match");
+            return;
+        }
+        if (passwords.new.length < 7) {
+            setPassError("Password must be at least 7 chars");
+            return;
+        }
+        setPassLoading(true);
+        try {
+            await api.put('/auth/update-password', {
+                currentPassword: passwords.current,
+                newPassword: passwords.new
+            });
+            setPassSuccess('Password updated successfully');
+            setPasswords({ current: '', new: '', confirm: '' });
+        } catch (err) {
+            setPassError(err.response?.data?.message || 'Failed to update password');
+        } finally {
+            setPassLoading(false);
+        }
+    };
+
     const handleAvatarChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -128,6 +161,50 @@ export default function Profile() {
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {saved ? 'Saved!' : saving ? 'Saving...' : 'Save Profile'}
             </button>
+
+            {/* Change Password */}
+            <div className="glass-card rounded-xl p-6 mb-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Change Password</h3>
+                <form onSubmit={handlePasswordUpdate} className="grid gap-4">
+                    <div>
+                        <label className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1 block">Current Password</label>
+                        <input
+                            type="password"
+                            value={passwords.current}
+                            onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                            className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500/50 focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1 block">New Password</label>
+                        <input
+                            type="password"
+                            value={passwords.new}
+                            onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                            className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500/50 focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1 block">Confirm New Password</label>
+                        <input
+                            type="password"
+                            value={passwords.confirm}
+                            onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                            className="w-full bg-dark-900/50 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500/50 focus:outline-none"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={passLoading}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 mt-2 w-fit cursor-pointer"
+                    >
+                        {passLoading ? 'Updating...' : 'Update Password'}
+                    </button>
+                    {passError && <p className="text-red-400 text-xs mt-1">{passError}</p>}
+                    {passSuccess && <p className="text-emerald-400 text-xs mt-1">{passSuccess}</p>}
+                </form>
+            </div>
+
 
             {/* Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

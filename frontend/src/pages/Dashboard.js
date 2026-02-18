@@ -9,6 +9,7 @@ import {
     AreaChart, Area,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import AIInsights from '../components/AIInsights';
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -36,10 +37,7 @@ export default function Dashboard() {
     const { user } = useAuth();
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [insights, setInsights] = useState(null);
-    const [insightsLoading, setInsightsLoading] = useState(false);
     const [kpiChanges, setKpiChanges] = useState(null);
-    const [correlations, setCorrelations] = useState(null);
 
     // Filters
     const [dateRange, setDateRange] = useState('all');
@@ -67,26 +65,6 @@ export default function Dashboard() {
             .catch(() => setKpiChanges(null));
     }, [data]);
 
-    // Fetch AI insights once data is loaded
-    useEffect(() => {
-        if (data.length >= 2) {
-            setInsightsLoading(true);
-            api.get('/data/insights')
-                .then(res => setInsights(res.data.insights))
-                .catch(() => setInsights(null))
-                .finally(() => setInsightsLoading(false));
-        }
-    }, [data]);
-
-    // Fetch cross-category correlations
-    useEffect(() => {
-        if (data.length >= 4) {
-            api.get('/data/correlations')
-                .then(res => setCorrelations(res.data.correlations))
-                .catch(() => setCorrelations(null));
-        }
-    }, [data]);
-
     // All unique categories
     const allCategories = useMemo(() => ['All', ...new Set(data.map(d => d.category))], [data]);
 
@@ -102,7 +80,7 @@ export default function Dashboard() {
             filtered = filtered.filter(d => new Date(d.date) >= cutoff);
         }
 
-        // Category filter
+        // Category filter (Dropdown)
         if (filterCategory !== 'All') {
             filtered = filtered.filter(d => d.category === filterCategory);
         }
@@ -110,7 +88,17 @@ export default function Dashboard() {
         return filtered;
     }, [data, dateRange, filterCategory]);
 
-    // KPI calculations using filtered data
+    // Active Category (Clicked from Chart)
+    const [activeCategory, setActiveCategory] = useState(null);
+
+    // KPI calculations using filtered data OR active category
+    const kpiData = useMemo(() => {
+        if (activeCategory) {
+            return filteredData.filter(d => d.category === activeCategory);
+        }
+        return filteredData;
+    }, [filteredData, activeCategory]);
+
     const categories = [...new Set(filteredData.map(d => d.category))];
     const categoryColors = {
         Revenue: { stroke: '#6366f1', fill: 'rgba(99,102,241,0.15)' },
@@ -128,16 +116,52 @@ export default function Dashboard() {
             .map(item => ({ name: item.label, value: item.value }));
     };
 
-    const totalEntries = filteredData.length;
-    const totalCategories = new Set(filteredData.map(d => d.category)).size;
-    const totalValue = filteredData.reduce((s, d) => s + d.value, 0);
+    const totalEntries = kpiData.length;
+    const totalCategories = new Set(kpiData.map(d => d.category)).size;
+    const totalValue = kpiData.reduce((s, d) => s + d.value, 0);
     const avgValue = totalEntries > 0 ? (totalValue / totalEntries).toFixed(1) : '—';
 
+    // Helper for compact number formatting (e.g. 1.2M, 5k)
+    const formatCompactNumber = (num) => {
+        return Intl.NumberFormat('en-US', {
+            notation: "compact",
+            maximumFractionDigits: 1
+        }).format(num);
+    };
+
     const statCards = [
-        { label: 'Total Entries', value: totalEntries, icon: Database, color: '#6366f1', bg: 'rgba(99,102,241,0.1)', change: kpiChanges?.entries ?? null },
-        { label: 'Categories', value: totalCategories, icon: FolderOpen, color: '#22c55e', bg: 'rgba(34,197,94,0.1)', change: null },
-        { label: 'Total Value', value: totalValue.toLocaleString(), icon: TrendingUp, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', change: kpiChanges?.totalValue ?? null },
-        { label: 'Average', value: avgValue, icon: Activity, color: '#ec4899', bg: 'rgba(236,72,153,0.1)', change: kpiChanges?.average ?? null },
+        {
+            label: activeCategory ? `${activeCategory} Entries` : 'Total Entries',
+            value: totalEntries,
+            icon: Database,
+            color: '#6366f1',
+            bg: 'rgba(99,102,241,0.1)',
+            change: (!activeCategory && kpiChanges?.entries) ?? null
+        },
+        {
+            label: 'Categories',
+            value: totalCategories,
+            icon: FolderOpen,
+            color: '#22c55e',
+            bg: 'rgba(34,197,94,0.1)',
+            change: null
+        },
+        {
+            label: activeCategory ? `${activeCategory} Value` : 'Total Value',
+            value: formatCompactNumber(totalValue),
+            icon: TrendingUp,
+            color: '#f59e0b',
+            bg: 'rgba(245,158,11,0.1)',
+            change: (!activeCategory && kpiChanges?.totalValue) ?? null
+        },
+        {
+            label: activeCategory ? `${activeCategory} Avg` : 'Average',
+            value: formatCompactNumber(Number(avgValue) || 0),
+            icon: Activity,
+            color: '#ec4899',
+            bg: 'rgba(236,72,153,0.1)',
+            change: (!activeCategory && kpiChanges?.average) ?? null
+        },
     ];
 
     const trendIcon = (trend) => {
@@ -172,6 +196,15 @@ export default function Dashboard() {
 
                 {/* Filter Controls */}
                 <div className="flex items-center gap-2">
+                    {activeCategory && (
+                        <button
+                            onClick={() => setActiveCategory(null)}
+                            className="text-xs text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors"
+                        >
+                            Reset Filter: <b>{activeCategory}</b> ✕
+                        </button>
+                    )}
+
                     {/* Date Range Dropdown */}
                     <div className="relative">
                         <button
@@ -204,7 +237,10 @@ export default function Dashboard() {
                     {/* Category Dropdown */}
                     <select
                         value={filterCategory}
-                        onChange={(e) => setFilterCategory(e.target.value)}
+                        onChange={(e) => {
+                            setFilterCategory(e.target.value);
+                            setActiveCategory(null); // Reset active category on filter change
+                        }}
                         className="px-3.5 py-2 rounded-lg bg-dark-700/50 text-xs font-medium text-slate-300
                         border border-dark-600/30 hover:bg-dark-700 transition-all cursor-pointer outline-none
                         focus:border-indigo-500/50"
@@ -244,69 +280,8 @@ export default function Dashboard() {
                 ))}
             </div>
 
-            {/* AI Insights & Category Correlations — Side by Side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                {/* AI Insights Card */}
-                {(insights || insightsLoading) && (
-                    <div className="glass-card rounded-xl p-4">
-                        <div className="flex items-center gap-1.5 mb-3">
-                            <BrainCircuit className="w-3.5 h-3.5 text-indigo-400" />
-                            <h2 className="text-xs font-semibold text-white">AI Insights</h2>
-                        </div>
-
-                        {insightsLoading ? (
-                            <div className="flex items-center gap-2 py-4">
-                                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                                <span className="text-sm text-slate-400">Analyzing your data...</span>
-                            </div>
-                        ) : insights && insights.length > 0 ? (
-                            <div className="flex flex-col gap-1.5">
-                                {insights.map((insight, i) => (
-                                    <div key={i} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border ${trendBg(insight.trend)}`}>
-                                        {trendIcon(insight.trend)}
-                                        <p className="text-xs text-slate-200 flex-1">{insight.message}</p>
-                                        <span className={`text-[11px] font-bold shrink-0 ${insight.change_pct > 0 ? 'text-emerald-400' :
-                                            insight.change_pct < 0 ? 'text-red-400' : 'text-slate-400'
-                                            }`}>
-                                            {insight.change_pct > 0 ? '+' : ''}{insight.change_pct}%
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-slate-500">Unable to generate insights. Make sure the AI Engine is running.</p>
-                        )}
-                    </div>
-                )}
-
-                {/* Cross-Category Correlations */}
-                {correlations && correlations.length > 0 && (
-                    <div className="glass-card rounded-xl p-4">
-                        <div className="flex items-center gap-1.5 mb-3">
-                            <Link2 className="w-3.5 h-3.5 text-purple-400" />
-                            <h2 className="text-xs font-semibold text-white">Category Correlations</h2>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            {correlations.map((c, i) => (
-                                <div key={i} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border
-                                    ${c.direction === 'positive' ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
-                                    <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded
-                                        ${c.strength === 'strong' ? 'bg-emerald-500/20 text-emerald-400' :
-                                            c.strength === 'moderate' ? 'bg-amber-500/20 text-amber-400' :
-                                                'bg-slate-500/20 text-slate-400'}`}>
-                                        {c.strength}
-                                    </div>
-                                    <p className="text-xs text-slate-200 flex-1">{c.message}</p>
-                                    <span className={`text-[11px] font-bold shrink-0
-                                        ${c.impact_pct > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        r={c.correlation}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
+            {/* AI Insights & Category Correlations */}
+            <AIInsights />
 
             {/* Per-Category Charts */}
             {categories.length > 0 ? (
@@ -315,14 +290,21 @@ export default function Dashboard() {
                         const catData = getChartDataForCategory(cat);
                         const colors = categoryColors[cat] || defaultColor;
                         const catTotal = catData.reduce((s, d) => s + d.value, 0);
+                        const isActive = activeCategory === cat;
+
                         return (
-                            <div key={cat} className="glass-card rounded-xl p-5">
+                            <div
+                                key={cat}
+                                onClick={() => setActiveCategory(isActive ? null : cat)}
+                                className={`glass-card rounded-xl p-5 transition-all duration-300 cursor-pointer
+                                    ${isActive ? 'ring-2 ring-indigo-500/50 bg-indigo-500/5' : 'hover:bg-dark-700/30'}`}
+                            >
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
-                                        <h2 className="text-sm font-semibold text-white">{cat}</h2>
-                                        <p className="text-xs text-slate-500 mt-0.5">{catData.length} entries · Total: {catTotal}</p>
+                                        <h2 className={`text-sm font-semibold transition-colors ${isActive ? 'text-indigo-400' : 'text-white'}`}>{cat}</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">{catData.length} entries · Total: {formatCompactNumber(catTotal)}</p>
                                     </div>
-                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors.stroke }} />
+                                    <div className={`w-3 h-3 rounded-full transition-all ${isActive ? 'ring-2 ring-white/20' : ''}`} style={{ backgroundColor: colors.stroke }} />
                                 </div>
                                 {catData.length >= 2 ? (
                                     <ResponsiveContainer width="100%" height={180}>
@@ -335,7 +317,13 @@ export default function Dashboard() {
                                             </defs>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.3)" vertical={false} />
                                             <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                                            <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} width={35} />
+                                            <YAxis
+                                                tick={{ fill: '#64748b', fontSize: 10 }}
+                                                axisLine={false}
+                                                tickLine={false}
+                                                width={35}
+                                                tickFormatter={formatCompactNumber}
+                                            />
                                             <Tooltip content={<CustomTooltip />} />
                                             <Area type="monotone" dataKey="value" stroke={colors.stroke} strokeWidth={2}
                                                 fill={`url(#grad-${cat})`} dot={{ r: 3, fill: colors.stroke, strokeWidth: 0 }} />

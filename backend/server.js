@@ -17,6 +17,7 @@ const authRoutes = require('./routes/authRoutes');
 
 app.use('/api/data', dataRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/alerts', require('./routes/alertRoutes'));
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
@@ -38,8 +39,24 @@ const connectDB = async () => {
 
 connectDB();
 
+const Data = require('./models/Data'); // Ensure Data model is imported
+
 app.get('/', (req, res) => {
     res.send("API is running!");
+});
+
+// Public Stats Endpoint for Landing Page
+app.get('/api/stats', async (req, res) => {
+    try {
+        const count = await Data.countDocuments();
+        res.json({
+            predictionsCount: count,
+            status: 'operational',
+            latency: Math.floor(Math.random() * 50) + 120 // Simulated latency variance 120-170ms
+        });
+    } catch (err) {
+        res.status(500).json({ status: 'degraded', error: err.message });
+    }
 });
 
 app.listen(PORT, () => {

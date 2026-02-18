@@ -10,6 +10,9 @@ import Predictions from './pages/Predictions';
 import Profile from './pages/Profile';
 import ManageData from './pages/ManageData';
 import AboutDeveloper from './pages/AboutDeveloper';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import LandingPage from './pages/LandingPage';
 import './index.css';
 
 // Protected route wrapper
@@ -23,7 +26,7 @@ function ProtectedRoute({ children }) {
 function GuestRoute({ children }) {
   const { token, loading } = useAuth();
   if (loading) return null;
-  return token ? <Navigate to="/" /> : children;
+  return token ? <Navigate to="/dashboard" /> : children;
 }
 
 function App() {
@@ -32,13 +35,18 @@ function App() {
       <ThemeProvider>
         <BrowserRouter>
           <Routes>
+            {/* Public Landing Page */}
+            <Route path="/" element={<LandingPage />} />
+
             {/* Auth pages (no sidebar) */}
             <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
             <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+            <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+            <Route path="/reset-password/:token" element={<GuestRoute><ResetPassword /></GuestRoute>} />
 
             {/* Dashboard pages (with sidebar) */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/add-data" element={<AddData />} />
               <Route path="/predictions" element={<Predictions />} />
               <Route path="/profile" element={<Profile />} />

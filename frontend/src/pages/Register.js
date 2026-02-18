@@ -16,6 +16,21 @@ export default function Register() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        // Email Validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email.match(emailRegex)) {
+            setError('Please write correct email id');
+            return;
+        }
+
+        // Password Validation
+        // Min 7 chars, 1 uppercase, 1 special char
+        if (password.length < 7 || !/[A-Z]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            setError('Password must be min 7 chars, with one capital letter and one special character');
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await api.post('/auth/register', { username, email, password });
@@ -23,7 +38,7 @@ export default function Register() {
                 { _id: res.data._id, username: res.data.username, email: res.data.email, avatar: res.data.avatar, theme: res.data.theme, createdAt: res.data.createdAt },
                 res.data.token
             );
-            navigate('/');
+            navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');
         } finally {
@@ -72,13 +87,14 @@ export default function Register() {
                             </div>
                         </div>
 
+
                         <div>
                             <label className="text-xs text-slate-400 font-medium mb-1.5 block">Email</label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
-                                    type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="you@example.com" required
+                                    type="text" value={email} onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="you@example.com"
                                     className="w-full bg-dark-800 border border-dark-600 rounded-lg pl-10 pr-4 py-2.5
                                     text-sm text-white placeholder-slate-600
                                     focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30
@@ -93,7 +109,7 @@ export default function Register() {
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
                                     type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="••••••••" required minLength={6}
+                                    placeholder="Min 7 chars, 1 Upper, 1 Special"
                                     className="w-full bg-dark-800 border border-dark-600 rounded-lg pl-10 pr-4 py-2.5
                                     text-sm text-white placeholder-slate-600
                                     focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30

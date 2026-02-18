@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import CreatableSelect from '../components/CreatableSelect';
 
 export default function AddData() {
     const [label, setLabel] = useState('');
@@ -9,7 +10,24 @@ export default function AddData() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
-    const categories = ['General', 'Revenue', 'Users', 'Performance', 'Sales'];
+    // Default categories plus dynamically fetched ones
+    const [allCategories, setAllCategories] = useState(['General', 'Revenue', 'Users', 'Performance', 'Sales']);
+
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const res = await api.get('/data/categories');
+            if (res.data && Array.isArray(res.data)) {
+                // Merge distinct categories from backend with defaults
+                setAllCategories(prev => [...new Set([...prev, ...res.data])]);
+            }
+        } catch (err) {
+            console.error("Failed to fetch categories", err);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,7 +38,12 @@ export default function AddData() {
             setMessage({ type: 'success', text: 'Data entry added successfully!' });
             setLabel('');
             setValue('');
-            setCategory('General');
+            // We keep the category as is, often user wants to add multiple entries in same category
+
+            // Refresh categories list if it was a new one
+            if (!allCategories.includes(category)) {
+                setAllCategories(prev => [...prev, category]);
+            }
         } catch (err) {
             setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to add data' });
         } finally {
@@ -39,8 +62,8 @@ export default function AddData() {
                 <div className="glass-card rounded-xl p-6">
                     {message.text && (
                         <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm mb-5 ${message.type === 'success'
-                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                            : 'bg-red-500/10 border border-red-500/20 text-red-400'
                             }`}>
                             {message.type === 'success'
                                 ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
@@ -76,15 +99,12 @@ export default function AddData() {
 
                         <div>
                             <label className="text-xs text-slate-400 font-medium mb-1.5 block">Category</label>
-                            <select
-                                value={category} onChange={(e) => setCategory(e.target.value)}
-                                className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5
-                                text-sm text-white
-                                focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30
-                                transition-all duration-200 cursor-pointer"
-                            >
-                                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
+                            <CreatableSelect
+                                options={allCategories}
+                                value={category}
+                                onChange={setCategory}
+                                placeholder="Select or create category..."
+                            />
                         </div>
 
                         <button

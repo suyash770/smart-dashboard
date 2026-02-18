@@ -26,6 +26,8 @@ export default function Predictions() {
     const [error, setError] = useState('');
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [mode, setMode] = useState('category'); // 'category' or 'file'
+    const [file, setFile] = useState(null);
 
     // What-If simulation state
     const [multiplier, setMultiplier] = useState(1.0);
@@ -62,6 +64,40 @@ export default function Predictions() {
             setResult(res.data);
         } catch (err) {
             setError(err.response?.data?.message || 'Prediction failed. Is the AI Engine running?');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleFileUpload = async () => {
+        if (!file) {
+            setError('Please select a file first');
+            return;
+        }
+        setError('');
+        setResult(null);
+        setSimResult(null);
+        setMultiplier(1.0);
+        setLoading(true);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await api.post('/data/predict/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            // Adapt response to match existing result structure if needed
+            // The AI engine returns { predictions: [], original_data: [], model: {} }
+            // expected result structure: { category: 'File Upload', original: [], predictions: [], model: {} }
+            setResult({
+                category: 'File Upload',
+                original: res.data.original_data,
+                predictions: res.data.predictions,
+                model: res.data.model
+            });
+        } catch (err) {
+            setError(err.response?.data?.error || err.response?.data?.message || 'Upload failed');
         } finally {
             setLoading(false);
         }
@@ -143,50 +179,104 @@ export default function Predictions() {
 
             {/* Controls */}
             <div className="glass-card rounded-xl p-5 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <Filter className="w-4 h-4 text-slate-400" />
-                    <h2 className="text-sm font-semibold text-white">Select Category to Predict</h2>
+                {/* Mode Tabs */}
+                <div className="flex gap-4 border-b border-dark-600/50 pb-4 mb-4">
+                    <button
+                        onClick={() => { setMode('category'); setResult(null); setError(''); }}
+                        className={`text-sm font-semibold pb-1 transition-colors
+                        ${mode === 'category' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                        Predict by Category
+                    </button>
+                    <button
+                        onClick={() => { setMode('file'); setResult(null); setError(''); }}
+                        className={`text-sm font-semibold pb-1 transition-colors
+                        ${mode === 'file' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                        Upload Data File
+                    </button>
                 </div>
 
-                {categories.length > 0 ? (
+                {mode === 'category' ? (
                     <>
-                        {/* Category Buttons */}
-                        <div className="flex flex-wrap gap-2 mb-5">
-                            {categories.map((cat) => (
-                                <button
-                                    key={cat}
-                                    onClick={() => { setSelectedCategory(cat); setResult(null); setSimResult(null); setError(''); setMultiplier(1.0); }}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer
-                                    ${selectedCategory === cat
-                                            ? 'text-white shadow-lg'
-                                            : 'bg-dark-700/50 text-slate-400 hover:text-slate-200 hover:bg-dark-700'
-                                        }`}
-                                    style={selectedCategory === cat ? {
-                                        backgroundColor: categoryColors[cat] || '#8b5cf6',
-                                        boxShadow: `0 4px 15px ${categoryColors[cat] || '#8b5cf6'}33`
-                                    } : {}}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
+                        <div className="flex items-center gap-2 mb-4">
+                            <Filter className="w-4 h-4 text-slate-400" />
+                            <h2 className="text-sm font-semibold text-white">Select Category to Predict</h2>
                         </div>
-
-                        {/* Run Button */}
+                        {categories.length > 0 ? (
+                            <>
+                                <div className="flex flex-wrap gap-2 mb-5">
+                                    {categories.map((cat) => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => { setSelectedCategory(cat); setResult(null); setSimResult(null); setError(''); setMultiplier(1.0); }}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer
+                                            ${selectedCategory === cat
+                                                    ? 'text-white shadow-lg'
+                                                    : 'bg-dark-700/50 text-slate-400 hover:text-slate-200 hover:bg-dark-700'
+                                                }`}
+                                            style={selectedCategory === cat ? {
+                                                backgroundColor: categoryColors[cat] || '#8b5cf6',
+                                                boxShadow: `0 4px 15px ${categoryColors[cat] || '#8b5cf6'}33`
+                                            } : {}}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={handlePredict} disabled={loading || !selectedCategory}
+                                    className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold
+                                    transition-all duration-200 cursor-pointer
+                                    ${loading
+                                            ? 'bg-dark-700 text-slate-400'
+                                            : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                                        }`}
+                                >
+                                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
+                                    {loading ? 'Running AI Model...' : `Predict ${selectedCategory}`}
+                                </button>
+                            </>
+                        ) : (
+                            <p className="text-sm text-slate-500">No data yet. Add entries from the sidebar first.</p>
+                        )}
+                    </>
+                ) : (
+                    <div className="flex flex-col gap-4">
+                        <div className="bg-dark-800/50 border border-dashed border-dark-600 rounded-xl p-8 text-center
+                            hover:border-indigo-500/50 transition-colors">
+                            <input
+                                type="file"
+                                id="file-upload"
+                                accept=".txt,.pdf"
+                                onChange={(e) => setFile(e.target.files[0])}
+                                className="hidden"
+                            />
+                            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                                <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center mb-3">
+                                    <Zap className="w-6 h-6 text-indigo-400" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-200 mb-1">
+                                    {file ? file.name : "Click to upload TXT or PDF"}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                    Format: One number per line, or "Date: Value"
+                                </span>
+                            </label>
+                        </div>
                         <button
-                            onClick={handlePredict} disabled={loading || !selectedCategory}
-                            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold
-                            transition-all duration-200 cursor-pointer
-                            ${loading
-                                    ? 'bg-dark-700 text-slate-400'
-                                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                            onClick={handleFileUpload} disabled={loading || !file}
+                            className={`flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold
+                            transition-all duration-200 cursor-pointer self-start
+                            ${loading || !file
+                                    ? 'bg-dark-700 text-slate-400 cursor-not-allowed'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'
                                 }`}
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-                            {loading ? 'Running AI Model...' : `Predict ${selectedCategory}`}
+                            {loading ? 'Processing File...' : 'Analyze & Predict'}
                         </button>
-                    </>
-                ) : (
-                    <p className="text-sm text-slate-500">No data yet. Add entries from the sidebar first.</p>
+                    </div>
                 )}
             </div>
 
@@ -332,12 +422,16 @@ export default function Predictions() {
             )}
 
             {/* Empty state */}
-            {!result && !error && !loading && categories.length > 0 && (
+            {!result && !error && !loading && (
                 <div className="glass-card rounded-xl p-12 text-center">
                     <BrainCircuit className="w-14 h-14 mx-auto mb-4 text-indigo-500/40" />
-                    <h2 className="text-lg font-semibold text-slate-300 mb-2">Select & Predict</h2>
+                    <h2 className="text-lg font-semibold text-slate-300 mb-2">
+                        {mode === 'category' ? 'Select & Predict' : 'Upload Data File'}
+                    </h2>
                     <p className="text-sm text-slate-500 max-w-sm mx-auto">
-                        Pick a category above, then hit the predict button. Each category is analyzed separately for accurate results.
+                        {mode === 'category'
+                            ? 'Pick a category above, then hit the predict button.'
+                            : 'Upload a PDF or TXT file with your data to analyze trends.'}
                     </p>
                 </div>
             )}
