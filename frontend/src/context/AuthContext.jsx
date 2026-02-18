@@ -10,9 +10,12 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         const checkSession = async () => {
             try {
+                console.log("Checking session...");
                 const { data } = await api.get('/auth/me');
+                console.log("Session found:", data);
                 setUser(data);
             } catch (err) {
+                console.log("No session found:", err);
                 setUser(null);
             } finally {
                 setLoading(false);
