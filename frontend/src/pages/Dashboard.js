@@ -3,10 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
     Database, FolderOpen, TrendingUp, Activity, Loader2,
-    ArrowUpRight, ArrowDownRight, Minus, CalendarDays, ChevronDown
+    ArrowUpRight, ArrowDownRight, CalendarDays, ChevronDown
 } from 'lucide-react';
 import {
-    AreaChart, Area,
+    AreaChart, Area, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer
 } from 'recharts';
 import AIInsights from '../components/AIInsights';

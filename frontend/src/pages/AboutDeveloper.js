@@ -1,6 +1,6 @@
 import {
     Github, Linkedin, Mail, Code2, Brain, Database, BarChart3,
-    Cpu, Globe, Sparkles, ExternalLink, MapPin, GraduationCap, Heart
+    Cpu, Globe, Sparkles, ExternalLink, MapPin, GraduationCap
 } from 'lucide-react';
 
 const skills = [

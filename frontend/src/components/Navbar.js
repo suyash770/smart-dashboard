@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+
 import { Bell, Check, Trash2, Settings, Plus, X, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 
 const Navbar = () => {
-    const { user } = useAuth();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showDropdown, setShowDropdown] = useState(false);

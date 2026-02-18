@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
-    Sparkles, ArrowUpRight, ArrowDownRight, Minus,
-    TrendingUp, AlertTriangle, BrainCircuit, X, RefreshCw
+    Sparkles, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, BrainCircuit, X, RefreshCw
 } from 'lucide-react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
 
 const InsightCard = ({ insight }) => {
     let icon = <Minus className="w-5 h-5 text-slate-400" />;
