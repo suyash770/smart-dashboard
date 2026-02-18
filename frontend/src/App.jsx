@@ -19,7 +19,7 @@ import './index.css';
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? children : <Navigate to="/login" />;
+  return user ? children : <Navigate to="/" />;
 }
 
 // Redirect if already logged in
