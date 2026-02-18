@@ -67,7 +67,7 @@ export default function AboutDeveloper() {
                             shadow-xl transition-transform duration-300 group-hover:scale-105
                             border-2 border-indigo-500/30">
                             <img
-                                src="/developer.png"
+                                src="/new dev img.png"
                                 alt="Suyash Gupta"
                                 className="w-full h-full object-cover"
                             />
