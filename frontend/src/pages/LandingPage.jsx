@@ -190,8 +190,8 @@ function LandingPage() {
             <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-dark-900/80 backdrop-blur-md border-b border-white/5' : 'bg-transparent'}`}>
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2 rounded-lg">
-                            <Activity className="w-5 h-5 text-white" />
+                        <div className="w-9 h-9 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            <img src="/logo192.png" alt="Logo" className="w-full h-full object-cover" />
                         </div>
                         <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
                             SmartDash

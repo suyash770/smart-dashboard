@@ -42,8 +42,8 @@ export default function Sidebar() {
                     {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
                 </button>
 
-                <div className="w-9 h-9 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0">
-                    <Activity className="w-5 h-5 text-indigo-400" />
+                <div className="w-9 h-9 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <img src="/logo192.png" alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 {!collapsed && (
                     <div className="animate-fade-in">
