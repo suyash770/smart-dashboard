@@ -14,7 +14,7 @@ app.use(express.json({ limit: '2mb' }));
 
 // Session Configuration
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
+const MongoStore = require('connect-mongo').default || require('connect-mongo');
 
 app.set('trust proxy', 1); // Required for Render/Heroku to trust the proxy and set secure cookies
 
