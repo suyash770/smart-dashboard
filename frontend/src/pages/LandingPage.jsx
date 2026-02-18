@@ -156,7 +156,7 @@ function LandingPage() {
         setIsLoggingIn(true);
         try {
             const { data } = await api.post('/auth/demo-login');
-            login(data, data.token);
+            login(data);
             navigate('/dashboard');
         } catch (error) {
             alert('Demo login failed. Please try "Get Started".');

@@ -34,10 +34,7 @@ export default function Register() {
         setLoading(true);
         try {
             const res = await api.post('/auth/register', { username, email, password });
-            login(
-                { _id: res.data._id, username: res.data.username, email: res.data.email, avatar: res.data.avatar, theme: res.data.theme, createdAt: res.data.createdAt },
-                res.data.token
-            );
+            login(res.data);
             navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');

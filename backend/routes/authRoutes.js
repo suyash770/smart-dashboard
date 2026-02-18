@@ -52,15 +52,16 @@ router.post('/register', async (req, res) => {
 
         const user = await User.create({ username, email, password });
 
-        res.status(201).json({
+        req.session.user = {
             _id: user._id,
             username: user.username,
             email: user.email,
             avatar: user.avatar,
             theme: user.theme,
-            createdAt: user.createdAt,
-            token: generateToken(user._id)
-        });
+            createdAt: user.createdAt
+        };
+
+        res.status(201).json(req.session.user);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -81,15 +82,16 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid password. Please try again.' });
         }
 
-        res.json({
+        req.session.user = {
             _id: user._id,
             username: user.username,
             email: user.email,
             avatar: user.avatar,
             theme: user.theme,
-            createdAt: user.createdAt,
-            token: generateToken(user._id)
-        });
+            createdAt: user.createdAt
+        };
+
+        res.json(req.session.user);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -110,15 +112,16 @@ router.post('/demo-login', async (req, res) => {
             });
         }
 
-        res.json({
+        req.session.user = {
             _id: user._id,
             username: user.username,
             email: user.email,
             avatar: user.avatar,
             theme: user.theme,
-            createdAt: user.createdAt,
-            token: generateToken(user._id)
-        });
+            createdAt: user.createdAt
+        };
+
+        res.json(req.session.user);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -270,6 +273,26 @@ router.put('/reset-password/:resetToken', async (req, res) => {
 
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ message: 'Could not log out' });
+        }
+        res.clearCookie('connect.sid'); // Clear session cookie
+        res.json({ message: 'Logout successful' });
+    });
+});
+
+// GET /api/auth/me — Check if user is logged in
+router.get('/me', async (req, res) => {
+    if (req.session.user) {
+        return res.json(req.session.user);
+    } else {
+        return res.status(401).json({ message: 'Not authorized' });
     }
 });
 
