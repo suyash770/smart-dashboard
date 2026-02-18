@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
-    Database, FolderOpen, TrendingUp, TrendingDown, Activity, Loader2,
-    ArrowUpRight, ArrowDownRight, BrainCircuit, Minus, CalendarDays, ChevronDown, Link2
+    Database, FolderOpen, TrendingUp, Activity, Loader2,
+    ArrowUpRight, ArrowDownRight, Minus, CalendarDays, ChevronDown
 } from 'lucide-react';
 import {
     AreaChart, Area,
-    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+    Tooltip, ResponsiveContainer
 } from 'recharts';
 import AIInsights from '../components/AIInsights';
 
@@ -164,17 +164,7 @@ export default function Dashboard() {
         },
     ];
 
-    const trendIcon = (trend) => {
-        if (trend === 'up') return <TrendingUp className="w-4 h-4 text-emerald-400" />;
-        if (trend === 'down') return <TrendingDown className="w-4 h-4 text-red-400" />;
-        return <Minus className="w-4 h-4 text-amber-400" />;
-    };
 
-    const trendBg = (trend) => {
-        if (trend === 'up') return 'border-emerald-500/20 bg-emerald-500/5';
-        if (trend === 'down') return 'border-red-500/20 bg-red-500/5';
-        return 'border-amber-500/20 bg-amber-500/5';
-    };
 
     if (loading) {
         return (

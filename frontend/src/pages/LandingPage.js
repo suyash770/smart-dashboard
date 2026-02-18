@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, ArrowRight, ShieldCheck, Zap, Database,
-    Code2, BrainCircuit, Activity, Lock, Server, Globe, CheckCircle2, UserCheck, X, Github, Linkedin
+    Code2, BrainCircuit, Activity, Lock, Server, Globe, UserCheck, X, Github, Linkedin
 } from 'lucide-react';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line
+    AreaChart, Area, Tooltip, ResponsiveContainer, LineChart, Line
 } from 'recharts';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
