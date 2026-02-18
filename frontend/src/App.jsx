@@ -17,16 +17,16 @@ import './index.css';
 
 // Protected route wrapper
 function ProtectedRoute({ children }) {
-  const { token, loading } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return null;
-  return token ? children : <Navigate to="/login" />;
+  return user ? children : <Navigate to="/login" />;
 }
 
 // Redirect if already logged in
 function GuestRoute({ children }) {
-  const { token, loading } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return null;
-  return token ? <Navigate to="/dashboard" /> : children;
+  return user ? <Navigate to="/dashboard" /> : children;
 }
 
 function App() {
