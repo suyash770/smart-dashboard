@@ -61,7 +61,11 @@ router.post('/register', async (req, res) => {
             createdAt: user.createdAt
         };
 
-        res.status(201).json(req.session.user);
+        // Explicitly save session before response
+        req.session.save((err) => {
+            if (err) return res.status(500).json({ message: 'Session save failed' });
+            res.status(201).json(req.session.user);
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

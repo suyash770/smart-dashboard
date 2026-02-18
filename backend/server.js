@@ -4,12 +4,28 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER;
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL
-        ? [process.env.FRONTEND_URL, 'http://localhost:3000']
-        : '*',
-    credentials: true
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:3000'];
+        // Normalize origin (remove trailing slash) check
+        const isAllowed = allowedOrigins.some(allowed => allowed && (allowed === origin || allowed.replace(/\/$/, '') === origin.replace(/\/$/, '')));
+
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            console.log('Blocked by CORS:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
+
 app.use(express.json({ limit: '2mb' }));
 
 // Session Configuration
@@ -29,8 +45,8 @@ app.use(session({
     cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // true required for SameSite: None
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Cross-site cookie
+        secure: isProduction, // true required for SameSite: None
+        sameSite: isProduction ? 'none' : 'lax' // Cross-site cookie
     }
 }));
 
