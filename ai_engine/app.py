@@ -1,4 +1,3 @@
-```python
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from sklearn.linear_model import LinearRegression
