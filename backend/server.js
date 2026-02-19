@@ -8,6 +8,9 @@ const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER
 
 app.use(cors({
     origin: (origin, callback) => {
+        // Log Origin for Debugging
+        if (origin) console.log(`[CORS] Incoming Origin: ${origin}`);
+
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
