@@ -478,50 +478,7 @@ def simulate():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/simulate', methods=['POST'])
-def simulate():
-    """
-    Receives data points and a growth multiplier, returns original predictions
-    alongside multiplied projected predictions for What-If analysis.
-    """
-    try:
-        body = request.get_json()
-        data_points = body.get('data', [])
-        multiplier = float(body.get('multiplier', 1.0))
 
-        if len(data_points) < 2:
-            return jsonify({'error': 'Need at least 2 data points'}), 400
-
-        values = [point['value'] for point in data_points]
-        X = np.arange(len(values)).reshape(-1, 1)
-        y = np.array(values, dtype=float)
-
-        model = LinearRegression()
-        model.fit(X, y)
-
-        future_X = np.arange(len(values), len(values) + 3).reshape(-1, 1)
-        base_predictions = model.predict(future_X)
-
-        result = {
-            'original': [
-                {'label': f'Prediction {i+1}', 'value': round(float(p), 2), 'index': len(values) + i}
-                for i, p in enumerate(base_predictions)
-            ],
-            'projected': [
-                {'label': f'Prediction {i+1}', 'value': round(float(p * multiplier), 2), 'index': len(values) + i}
-                for i, p in enumerate(base_predictions)
-            ],
-            'multiplier': multiplier,
-            'model': {
-                'type': 'Linear Regression',
-                'accuracy': round(float(model.score(X, y) * 100), 2),
-                'slope': round(float(model.coef_[0]), 2)
-            }
-        }
-        return jsonify(result), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/download-model', methods=['GET'])
