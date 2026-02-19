@@ -32,6 +32,12 @@ const UserSchema = new mongoose.Schema({
         enum: ['dark', 'light'],
         default: 'dark'
     },
+    notifications: {
+        email: {
+            type: Boolean,
+            default: true
+        }
+    },
     createdAt: {
         type: Date,
         default: Date.now

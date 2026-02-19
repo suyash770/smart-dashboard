@@ -9,8 +9,16 @@ export default function Profile() {
     const { theme, toggleTheme } = useTheme();
     const fileInputRef = useRef();
     const [avatar, setAvatar] = useState(user?.avatar || '');
+    const [notifications, setNotifications] = useState(user?.notifications || { email: true });
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            setAvatar(user.avatar || '');
+            if (user.notifications) setNotifications(user.notifications);
+        }
+    }, [user]);
 
     // Password state
     const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
@@ -61,8 +69,12 @@ export default function Profile() {
         setSaving(true);
         setSaved(false);
         try {
-            const res = await api.put('/auth/profile', { avatar, theme });
-            updateUser({ avatar: res.data.avatar, theme: res.data.theme });
+            const res = await api.put('/auth/profile', { avatar, theme, notifications });
+            updateUser({
+                avatar: res.data.avatar,
+                theme: res.data.theme,
+                notifications: res.data.notifications
+            });
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
         } catch (err) {
@@ -123,12 +135,13 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* Theme Toggle */}
-            <div className="glass-card rounded-xl p-5 mb-6">
+            {/* Application Settings (Theme & Notifications) */}
+            <div className="glass-card rounded-xl p-5 mb-6 space-y-6">
+                {/* Theme Toggle */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h3 className="text-sm font-semibold text-white">Theme</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Switch between dark and light mode</p>
+                        <h3 className="text-sm font-semibold text-white">Appearance</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">Switch between dark and light theme</p>
                     </div>
                     <button
                         onClick={toggleTheme}
@@ -141,6 +154,22 @@ export default function Profile() {
                                 ? <Moon className="w-3 h-3 text-indigo-600" />
                                 : <Sun className="w-3 h-3 text-amber-500" />}
                         </span>
+                    </button>
+                </div>
+
+                {/* Notification Toggle */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-sm font-semibold text-white">Email Notifications</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">Receive alerts for critical data changes</p>
+                    </div>
+                    <button
+                        onClick={() => setNotifications(prev => ({ ...prev, email: !prev.email }))}
+                        className={`relative flex items-center w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer
+                        ${notifications.email ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                    >
+                        <span className={`absolute w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200
+                            ${notifications.email ? 'translate-x-7' : 'translate-x-1'}`} />
                     </button>
                 </div>
             </div>

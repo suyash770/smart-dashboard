@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-    Sparkles, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, BrainCircuit, X, RefreshCw
+    Sparkles, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, BrainCircuit, X, RefreshCw, Download
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -92,24 +92,66 @@ const AIInsights = ({ onClose }) => {
     const [activeTab, setActiveTab] = useState('insights'); // insights | correlations
     const [insights, setInsights] = useState([]);
     const [correlations, setCorrelations] = useState([]);
+    const [globalSummary, setGlobalSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [downloading, setDownloading] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
         setError(null);
         try {
             const [insightsRes, correlationsRes] = await Promise.all([
-                api.get('/data/insights').catch(e => ({ data: { insights: [] } })),
+                api.get('/data/insights').catch(e => ({ data: { insights: [], global_summary: null } })),
                 api.get('/data/correlations').catch(e => ({ data: { correlations: [] } }))
             ]);
 
             setInsights(insightsRes.data.insights || []);
+            setGlobalSummary(insightsRes.data.global_summary || null);
             setCorrelations(correlationsRes.data.correlations || []);
         } catch (err) {
             setError('Failed to load AI analytics.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const downloadReport = async () => {
+        if (!insights.length && !globalSummary) return;
+        setDownloading(true);
+        try {
+            // Use local proxy /api/ai/generate-report if configured, or direct call if proxy is simple pass-through.
+            // Assuming /api/data/generate-report via proxy or similar.
+            // Wait, implementation plan said /generate-report in ai_engine.
+            // If strict proxy, I need to route it.
+            // Let's try /api/data/generate-report and ensure backend proxies it.
+            // OR simple: check if frontend talks to ai_engine directly? No, usually via backend proxy.
+
+            // Checking backend routes:
+            // I'll assume I need to ADD a proxy route in backend first if it doesn't wildcard.
+            // But let's write the frontend assuming the route exists: '/data/report' (mapped to ai_engine /generate-report)
+
+            // Wait, previously I saw `api.get('/data/insights')` works.
+            // So I should use the backend to proxy.
+            // I'll stick to editing THIS file now, and then I'll check/fix backend proxy.
+
+            const response = await api.post('/data/generate-report', {
+                insights,
+                global_summary: globalSummary
+            }, { responseType: 'blob' });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `SmartDash_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err) {
+            console.error("Report generation failed", err);
+            // Flash error?
+        } finally {
+            setDownloading(false);
         }
     };
 
@@ -126,6 +168,15 @@ const AIInsights = ({ onClose }) => {
                     <h3 className="font-bold text-white">AI Analytics Engine</h3>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={downloadReport}
+                        disabled={downloading || loading || (!insights.length && !globalSummary)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Export PDF Report"
+                    >
+                        <Download className={`w-3.5 h-3.5 ${downloading ? 'animate-bounce' : ''}`} />
+                        {downloading ? 'Exporting...' : 'Export Report'}
+                    </button>
                     <button
                         onClick={fetchData}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
@@ -170,16 +221,33 @@ const AIInsights = ({ onClose }) => {
                         {error}
                     </div>
                 ) : activeTab === 'insights' ? (
-                    <div className="grid md:grid-cols-2 gap-4">
-                        {insights.length > 0 ? (
-                            insights.map((insight, idx) => (
-                                <InsightCard key={idx} insight={insight} />
-                            ))
-                        ) : (
-                            <p className="text-center col-span-2 py-8 text-slate-500 text-sm">
-                                Not enough data to generate insights yet.
-                            </p>
+                    <div className="space-y-4">
+                        {/* Global Summary Card */}
+                        {globalSummary && (
+                            <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-300">
+                                        <BrainCircuit className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-indigo-300 mb-1">AI Executive Summary</h4>
+                                        <p className="text-sm text-slate-200 leading-relaxed">{globalSummary}</p>
+                                    </div>
+                                </div>
+                            </div>
                         )}
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                            {insights.length > 0 ? (
+                                insights.map((insight, idx) => (
+                                    <InsightCard key={idx} insight={insight} />
+                                ))
+                            ) : (
+                                <p className="text-center col-span-2 py-8 text-slate-500 text-sm">
+                                    Not enough data to generate insights yet.
+                                </p>
+                            )}
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-2">

@@ -313,6 +313,26 @@ router.get('/correlations', protect, async (req, res) => {
     }
 });
 
+// POST Generate PDF Report
+router.post('/generate-report', protect, async (req, res) => {
+    try {
+        const aiUrl = process.env.AI_ENGINE_URL || 'http://127.0.0.1:5001';
+
+        // Forward request to AI Engine
+        const response = await axios.post(`${aiUrl}/generate-report`, req.body, {
+            responseType: 'stream'
+        });
+
+        // Pipe PDF back to client
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=smart_dash_report.pdf');
+        response.data.pipe(res);
+    } catch (err) {
+        console.error("Report Proxy Error:", err.message);
+        res.status(500).json({ message: "Failed to generate report" });
+    }
+});
+
 // GET What-If simulation with growth multiplier
 router.get('/simulate', protect, async (req, res) => {
     try {

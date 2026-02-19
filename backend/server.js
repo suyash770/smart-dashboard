@@ -49,8 +49,8 @@ app.use(session({
     cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         httpOnly: true, // Prevents JS access
-        secure: true, // ALWAYS true for SameSite: None (Required for Vercel -> Render)
-        sameSite: 'none' // REQUIRED for cross-domain cookies
+        secure: isProduction, // true in prod, false in dev
+        sameSite: isProduction ? 'none' : 'lax' // none in prod, lax in dev
     }
 }));
 

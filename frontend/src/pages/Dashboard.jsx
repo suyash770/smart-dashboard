@@ -6,10 +6,11 @@ import {
     ArrowUpRight, ArrowDownRight, CalendarDays, ChevronDown
 } from 'lucide-react';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid,
+    AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer
 } from 'recharts';
 import AIInsights from '../components/AIInsights';
+import NLSearch from '../components/NLSearch';
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -39,10 +40,16 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [kpiChanges, setKpiChanges] = useState(null);
 
-    // Filters
+    // Filters & Drill-down State
     const [dateRange, setDateRange] = useState('all');
     const [filterCategory, setFilterCategory] = useState('All');
+    const [valueFilter, setValueFilter] = useState(null); // { op: 'gt'|'lt', value: number }
     const [showDateDropdown, setShowDateDropdown] = useState(false);
+
+    // Drill-down: 'overview' (monthly/agg) vs 'detail' (daily)
+    const [viewMode, setViewMode] = useState('overview');
+    const [selectedMonth, setSelectedMonth] = useState(null);
+    const [activeCategory, setActiveCategory] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -68,11 +75,11 @@ export default function Dashboard() {
     // All unique categories
     const allCategories = useMemo(() => ['All', ...new Set(data.map(d => d.category))], [data]);
 
-    // Filtered data based on date range and category
+    // 1. Base Filtered Data (Date Range & Category & Value)
     const filteredData = useMemo(() => {
         let filtered = data;
 
-        // Date filter
+        // Date filter (Global)
         if (dateRange !== 'all') {
             const now = new Date();
             const daysMap = { '7d': 7, '30d': 30, '90d': 90 };
@@ -85,40 +92,98 @@ export default function Dashboard() {
             filtered = filtered.filter(d => d.category === filterCategory);
         }
 
-        return filtered;
-    }, [data, dateRange, filterCategory]);
-
-    // Active Category (Clicked from Chart)
-    const [activeCategory, setActiveCategory] = useState(null);
-
-    // KPI calculations using filtered data OR active category
-    const kpiData = useMemo(() => {
+        // Active aggregation category (Clicked from chart legend/cards)
         if (activeCategory) {
-            return filteredData.filter(d => d.category === activeCategory);
+            filtered = filtered.filter(d => d.category === activeCategory);
         }
-        return filteredData;
-    }, [filteredData, activeCategory]);
 
-    const categories = [...new Set(filteredData.map(d => d.category))];
-    const categoryColors = {
-        Revenue: { stroke: '#6366f1', fill: 'rgba(99,102,241,0.15)' },
-        Users: { stroke: '#22c55e', fill: 'rgba(34,197,94,0.15)' },
-        Performance: { stroke: '#f59e0b', fill: 'rgba(245,158,11,0.15)' },
-        Sales: { stroke: '#ec4899', fill: 'rgba(236,72,153,0.15)' },
-        General: { stroke: '#06b6d4', fill: 'rgba(6,182,212,0.15)' },
+        // Value Filter (from NL Search)
+        if (valueFilter) {
+            if (valueFilter.op === 'gt') {
+                filtered = filtered.filter(d => d.value > valueFilter.value);
+            } else if (valueFilter.op === 'lt') {
+                filtered = filtered.filter(d => d.value < valueFilter.value);
+            }
+        }
+
+        return filtered;
+    }, [data, dateRange, filterCategory, activeCategory, valueFilter]);
+
+    // Handle Natural Language Search
+    const handleNLSearch = (intent) => {
+        if (!intent) {
+            // Clear filters logic if needed, or just do nothing
+            return;
+        }
+        if (intent.category) {
+            setFilterCategory(intent.category);
+            setActiveCategory(null); // Reset drill-down intent
+        }
+        if (intent.dateRange) {
+            setDateRange(intent.dateRange);
+        }
+        if (intent.value !== null && intent.value !== undefined) {
+            setValueFilter({ op: intent.valueOp, value: intent.value });
+        } else {
+            setValueFilter(null);
+        }
     };
-    const defaultColor = { stroke: '#8b5cf6', fill: 'rgba(139,92,246,0.15)' };
 
-    const getChartDataForCategory = (cat) => {
-        return filteredData
-            .filter(d => d.category === cat)
-            .sort((a, b) => new Date(a.date) - new Date(b.date))
-            .map(item => ({ name: item.label, value: item.value }));
+    // 2. Monthly Aggregation (For Overview)
+    const monthlyData = useMemo(() => {
+        const grouped = {};
+        filteredData.forEach(d => {
+            const date = new Date(d.date);
+            const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' }); // "Oct 2023"
+            const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            if (!grouped[monthKey]) {
+                grouped[monthKey] = { name: monthKey, value: 0, count: 0, sortKey };
+            }
+            grouped[monthKey].value += d.value;
+            grouped[monthKey].count += 1;
+        });
+
+        // Convert to array and sort chronologically
+        let result = Object.values(grouped).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+        // Calculate growth rate for tooltips
+        result = result.map((item, index) => {
+            const prev = result[index - 1];
+            const growth = prev ? ((item.value - prev.value) / prev.value) * 100 : 0;
+            return { ...item, growth: growth.toFixed(1) };
+        });
+
+        return result;
+    }, [filteredData]);
+
+    // 3. Daily Data (For Drill-down)
+    const dailyData = useMemo(() => {
+        if (!selectedMonth) return [];
+        return filteredData.filter(d => {
+            const date = new Date(d.date);
+            const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+            return monthKey === selectedMonth;
+        }).sort((a, b) => new Date(a.date) - new Date(b.date))
+            .map(d => ({
+                ...d,
+                day: new Date(d.date).getDate(), // Just the day number
+                fullDate: new Date(d.date).toLocaleDateString()
+            }));
+    }, [filteredData, selectedMonth]);
+
+    // Handle Drill-Down Click
+    const handleMonthClick = (data) => {
+        if (data && data.activePayload && data.activePayload.length > 0) {
+            const month = data.activePayload[0].payload.name;
+            setSelectedMonth(month);
+            setViewMode('detail');
+        }
     };
 
-    const totalEntries = kpiData.length;
-    const totalCategories = new Set(kpiData.map(d => d.category)).size;
-    const totalValue = kpiData.reduce((s, d) => s + d.value, 0);
+    const totalEntries = filteredData.length;
+    const totalCategories = new Set(filteredData.map(d => d.category)).size;
+    const totalValue = filteredData.reduce((s, d) => s + d.value, 0);
     const avgValue = totalEntries > 0 ? (totalValue / totalEntries).toFixed(1) : '—';
 
     // Helper for compact number formatting (e.g. 1.2M, 5k)
@@ -164,8 +229,6 @@ export default function Dashboard() {
         },
     ];
 
-
-
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[60vh]">
@@ -174,8 +237,11 @@ export default function Dashboard() {
         );
     }
 
+    // Chart Components need to be dynamically imported or defined here to use state
+    // We already imported Recharts components at top
+
     return (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in pb-12">
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-white mb-1">Dashboard</h1>
@@ -186,12 +252,19 @@ export default function Dashboard() {
 
                 {/* Filter Controls */}
                 <div className="flex items-center gap-2">
-                    {activeCategory && (
+                    {/* Reset Active Filter */}
+                    {(activeCategory || viewMode === 'detail' || valueFilter) && (
                         <button
-                            onClick={() => setActiveCategory(null)}
-                            className="text-xs text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors"
+                            onClick={() => {
+                                setActiveCategory(null);
+                                setViewMode('overview');
+                                setSelectedMonth(null);
+                                setValueFilter(null);
+                                setFilterCategory('All');
+                            }}
+                            className="text-xs text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors flex items-center gap-1"
                         >
-                            Reset Filter: <b>{activeCategory}</b> ✕
+                            Reset View ✕
                         </button>
                     )}
 
@@ -229,7 +302,7 @@ export default function Dashboard() {
                         value={filterCategory}
                         onChange={(e) => {
                             setFilterCategory(e.target.value);
-                            setActiveCategory(null); // Reset active category on filter change
+                            setActiveCategory(null);
                         }}
                         className="px-3.5 py-2 rounded-lg bg-dark-700/50 text-xs font-medium text-slate-300
                         border border-dark-600/30 hover:bg-dark-700 transition-all cursor-pointer outline-none
@@ -242,22 +315,30 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Stat Cards with Smart Comparison */}
+            {/* NL Search Command Bar */}
+            <NLSearch onSearch={handleNLSearch} categories={allCategories.filter(c => c !== 'All')} />
+
+            {/* Active Value Filter Badge */}
+            {valueFilter && (
+                <div className="mb-4 flex justify-center">
+                    <span className="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-xs border border-emerald-500/20 flex items-center gap-2">
+                        Filtered: Value {valueFilter.op === 'gt' ? '>' : '<'} {valueFilter.value}
+                        <button onClick={() => setValueFilter(null)} className="hover:text-white transition-colors">✕</button>
+                    </span>
+                </div>
+            )}
+
+            {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {statCards.map(({ label, value, icon: Icon, color, bg, change }) => (
                     <div key={label} className="glass-card rounded-xl p-4 hover:scale-[1.02] transition-transform duration-200">
                         <div className="flex items-center justify-between mb-3">
-                            <div className="p-2 rounded-lg" style={{ backgroundColor: bg }}>
+                            <div className={`p-2 rounded-lg ${parseFloat(change) > 0 ? 'animate-pulse' : ''}`} style={{ backgroundColor: bg }}>
                                 <Icon className="w-4 h-4" style={{ color }} />
                             </div>
                             {change !== null ? (
                                 <div className={`flex items-center gap-0.5 text-[11px] font-bold
                                     ${parseFloat(change) > 0 ? 'text-emerald-400' : parseFloat(change) < 0 ? 'text-red-400' : 'text-slate-400'}`}>
-                                    {parseFloat(change) > 0 ? (
-                                        <ArrowUpRight className="w-3.5 h-3.5" />
-                                    ) : parseFloat(change) < 0 ? (
-                                        <ArrowDownRight className="w-3.5 h-3.5" />
-                                    ) : null}
                                     {parseFloat(change) > 0 ? '+' : ''}{change}%
                                 </div>
                             ) : (
@@ -270,71 +351,104 @@ export default function Dashboard() {
                 ))}
             </div>
 
-            {/* AI Insights & Category Correlations */}
-            <AIInsights />
-
-            {/* Per-Category Charts */}
-            {categories.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {categories.map((cat) => {
-                        const catData = getChartDataForCategory(cat);
-                        const colors = categoryColors[cat] || defaultColor;
-                        const catTotal = catData.reduce((s, d) => s + d.value, 0);
-                        const isActive = activeCategory === cat;
-
-                        return (
-                            <div
-                                key={cat}
-                                onClick={() => setActiveCategory(isActive ? null : cat)}
-                                className={`glass-card rounded-xl p-5 transition-all duration-300 cursor-pointer
-                                    ${isActive ? 'ring-2 ring-indigo-500/50 bg-indigo-500/5' : 'hover:bg-dark-700/30'}`}
-                            >
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <h2 className={`text-sm font-semibold transition-colors ${isActive ? 'text-indigo-400' : 'text-white'}`}>{cat}</h2>
-                                        <p className="text-xs text-slate-500 mt-0.5">{catData.length} entries · Total: {formatCompactNumber(catTotal)}</p>
-                                    </div>
-                                    <div className={`w-3 h-3 rounded-full transition-all ${isActive ? 'ring-2 ring-white/20' : ''}`} style={{ backgroundColor: colors.stroke }} />
-                                </div>
-                                {catData.length >= 2 ? (
-                                    <ResponsiveContainer width="100%" height={180}>
-                                        <AreaChart data={catData}>
-                                            <defs>
-                                                <linearGradient id={`grad-${cat}`} x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={colors.stroke} stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor={colors.stroke} stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.3)" vertical={false} />
-                                            <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                                            <YAxis
-                                                tick={{ fill: '#64748b', fontSize: 10 }}
-                                                axisLine={false}
-                                                tickLine={false}
-                                                width={35}
-                                                tickFormatter={formatCompactNumber}
-                                            />
-                                            <Tooltip content={<CustomTooltip />} />
-                                            <Area type="monotone" dataKey="value" stroke={colors.stroke} strokeWidth={2}
-                                                fill={`url(#grad-${cat})`} dot={{ r: 3, fill: colors.stroke, strokeWidth: 0 }} />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="h-[180px] flex items-center justify-center">
-                                        <p className="text-xs text-slate-600">Add more entries to see a chart</p>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+            {/* Main Interactive Chart Section */}
+            <div className="glass-card rounded-xl p-6 mb-6 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                            {viewMode === 'overview' ? 'Monthly Overview' : `Daily Breakdown: ${selectedMonth}`}
+                            {viewMode === 'detail' && (
+                                <span className="text-xs font-normal text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                                    Drilled Down
+                                </span>
+                            )}
+                        </h2>
+                        <p className="text-sm text-slate-400">
+                            {viewMode === 'overview'
+                                ? 'Click on a bar to see daily details.'
+                                : `Showing daily performance for ${selectedMonth}.`}
+                        </p>
+                    </div>
+                    {viewMode === 'detail' && (
+                        <button
+                            onClick={() => { setViewMode('overview'); setSelectedMonth(null); }}
+                            className="text-xs bg-dark-700 hover:bg-dark-600 text-white px-3 py-1.5 rounded-lg transition-colors border border-dark-500"
+                        >
+                            Back to Overview
+                        </button>
+                    )}
                 </div>
-            ) : (
-                <div className="glass-card rounded-xl p-12 text-center">
-                    <TrendingUp className="w-12 h-12 mx-auto mb-4 text-slate-600" />
-                    <p className="text-lg font-medium text-slate-400">No data yet</p>
-                    <p className="text-sm text-slate-600 mt-1">Go to "Add Data" in the sidebar to start</p>
+
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        {viewMode === 'overview' ? (
+                            <BarChart data={monthlyData} onClick={handleMonthClick} className="cursor-pointer">
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.2)" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatCompactNumber} />
+                                <Tooltip
+                                    cursor={{ fill: 'rgba(99,102,241,0.05)' }}
+                                    content={({ active, payload, label }) => {
+                                        if (!active || !payload?.length) return null;
+                                        const data = payload[0].payload;
+                                        return (
+                                            <div className="bg-dark-800 border border-dark-600 rounded-lg p-3 shadow-xl">
+                                                <p className="text-slate-200 font-semibold text-sm mb-1">{label}</p>
+                                                <div className="flex items-end gap-2">
+                                                    <span className="text-2xl font-bold text-white">{formatCompactNumber(data.value)}</span>
+                                                    {data.growth !== 0 && (
+                                                        <span className={`text-xs font-bold mb-1 ${Number(data.growth) > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                            {Number(data.growth) > 0 ? '+' : ''}{data.growth}%
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-1">{data.count} entries</p>
+                                                <p className="text-[10px] text-indigo-400 mt-2">Click to drill down ↓</p>
+                                            </div>
+                                        );
+                                    }}
+                                />
+                                <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                                    {monthlyData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.value > 0 ? '#6366f1' : '#334155'} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        ) : (
+                            <AreaChart data={dailyData}>
+                                <defs>
+                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.2)" vertical={false} />
+                                <XAxis dataKey="day" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} label={{ value: 'Day', position: 'insideBottomRight', offset: -5 }} />
+                                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatCompactNumber} />
+                                <Tooltip content={({ active, payload, label }) => {
+                                    if (!active || !payload?.length) return null;
+                                    const d = payload[0].payload;
+                                    return (
+                                        <div className="bg-dark-800 border border-dark-600 rounded-lg p-3 shadow-xl">
+                                            <p className="text-slate-400 text-xs mb-1">{d.fullDate}</p>
+                                            <p className="text-lg font-bold text-white">{formatCompactNumber(d.value)}</p>
+                                            <p className="text-xs text-slate-500">{d.label}</p>
+                                            <p className="text-[10px] text-indigo-300 mt-1">{d.category}</p>
+                                        </div>
+                                    );
+                                }}
+                                />
+                                <Area type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                            </AreaChart>
+                        )}
+                    </ResponsiveContainer>
                 </div>
-            )}
+            </div>
+
+            {/* AI Insights Panel */}
+            <div className="mb-6">
+                <AIInsights />
+            </div>
         </div>
     );
 }

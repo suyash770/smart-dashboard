@@ -32,12 +32,12 @@ export default function Sidebar({ collapsed }) {
             transition-all duration-300 ease-in-out`}
         >
             {/* Logo area - Toggle moved to Navbar */}
-            <div className="flex items-center gap-3 px-4 h-16 border-b border-dark-600/50 justify-center">
+            <div className="flex w-full items-center gap-3 px-4 h-16 border-b border-dark-600/50 justify-center">
                 <div className="w-9 h-9 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     <img src="/logo192.png" alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 {!collapsed && (
-                    <div className="animate-fade-in">
+                    <div className="animate-fade-in text-center">
                         <h1 className="text-sm font-bold text-white tracking-tight">SmartDash</h1>
                         <p className="text-[10px] text-slate-500 font-medium">AI Analytics</p>
                     </div>

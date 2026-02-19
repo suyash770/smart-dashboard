@@ -20,6 +20,8 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
 };
 
+import ScenarioSimulator from '../components/ScenarioSimulator';
+
 export default function Predictions() {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -29,7 +31,7 @@ export default function Predictions() {
     const [mode, setMode] = useState('category'); // 'category' or 'file'
     const [file, setFile] = useState(null);
 
-    // What-If simulation state
+    // What-If simulation state (Legacy/Integrated)
     const [multiplier, setMultiplier] = useState(1.0);
     const [simResult, setSimResult] = useState(null);
     const [simLoading, setSimLoading] = useState(false);
@@ -38,12 +40,13 @@ export default function Predictions() {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const res = await api.get('/data');
-                const cats = [...new Set(res.data.map(d => d.category))];
+                const res = await api.get('/data/categories');
+                // Ensure unique categories
+                const cats = Array.isArray(res.data) ? res.data : [];
                 setCategories(cats);
                 if (cats.length > 0) setSelectedCategory(cats[0]);
             } catch (err) {
-                console.error('Failed to load categories');
+                console.error('Failed to load categories', err);
             }
         };
         fetchCategories();
@@ -176,6 +179,17 @@ export default function Predictions() {
                 <h1 className="text-2xl font-bold text-white mb-1">AI Predictions</h1>
                 <p className="text-slate-400 text-sm">Select a category and run the AI model to predict future trends.</p>
             </div>
+
+            {/* AI Sandbox / Scenario Simulator */}
+            <ScenarioSimulator />
+
+            {/* Separator */}
+            <div className="border-t border-dark-600/50 my-8"></div>
+
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <BrainCircuit className="w-5 h-5 text-indigo-400" />
+                Detailed Analysis & File Upload
+            </h2>
 
             {/* Controls */}
             <div className="glass-card rounded-xl p-5 mb-6">

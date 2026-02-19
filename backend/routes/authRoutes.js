@@ -58,6 +58,7 @@ router.post('/register', async (req, res) => {
             email: user.email,
             avatar: user.avatar,
             theme: user.theme,
+            notifications: user.notifications,
             createdAt: user.createdAt
         };
 
@@ -95,6 +96,7 @@ router.post('/login', async (req, res) => {
             email: user.email,
             avatar: user.avatar,
             theme: user.theme,
+            notifications: user.notifications,
             createdAt: user.createdAt
         };
 
@@ -131,6 +133,7 @@ router.post('/demo-login', async (req, res) => {
             email: user.email,
             avatar: user.avatar,
             theme: user.theme,
+            notifications: user.notifications,
             createdAt: user.createdAt
         };
 
@@ -148,18 +151,36 @@ router.put('/profile', protect, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+
+
         if (req.body.avatar !== undefined) user.avatar = req.body.avatar;
         if (req.body.theme !== undefined) user.theme = req.body.theme;
+        if (req.body.notifications !== undefined) {
+            // Ensure we don't lose existing defaults
+            const current = user.notifications ? user.notifications.toObject() : { email: true };
+            user.notifications = { ...current, ...req.body.notifications };
+            user.markModified('notifications');
+        }
 
         await user.save();
 
-        res.json({
+        req.session.user = {
             _id: user._id,
             username: user.username,
             email: user.email,
             avatar: user.avatar,
             theme: user.theme,
-            createdAt: user.createdAt,
+            notifications: user.notifications,
+            createdAt: user.createdAt
+        };
+
+        // Explicitly save session before response
+        req.session.save((err) => {
+            if (err) {
+                console.error("Session save error:", err);
+                return res.status(500).json({ message: 'Session save failed' });
+            }
+            res.json(req.session.user);
         });
     } catch (err) {
         res.status(500).json({ message: err.message });

@@ -1,11 +1,16 @@
-from flask import Flask, request, jsonify, send_file
+```python
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from sklearn.linear_model import LinearRegression
 import numpy as np
-import os
+import pandas as pd
 import io
-import re
+import os
 from pypdf import PdfReader
+from datetime import datetime
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import re
 
 app = Flask(__name__)
 # Configure CORS
@@ -219,13 +224,114 @@ def insights():
                 }
             })
 
-        return jsonify({'insights': insights_list}), 200
+        # Generate Global Summary
+        if insights_list:
+            up_trends = [i for i in insights_list if i['trend'] == 'up']
+            down_trends = [i for i in insights_list if i['trend'] == 'down']
+            stable_trends = [i for i in insights_list if i['trend'] == 'stable']
+            
+            summary_parts = []
+            if len(up_trends) > len(down_trends):
+                summary_parts.append("Overall performance is positive.")
+            elif len(down_trends) > len(up_trends):
+                summary_parts.append("Performance is trending downwards.")
+            else:
+                summary_parts.append("Performance is mixed or stable.")
+
+            # Mention top mover
+            # Filter out items with 0 change or neutral
+            movers = [i for i in insights_list if abs(i['change_pct']) > 0]
+            if movers:
+                top_mover = max(movers, key=lambda x: abs(x['change_pct']))
+                direction = "growth" if top_mover['change_pct'] > 0 else "decline"
+                summary_parts.append(f"{top_mover['category']} is seeing the most significant {direction} ({top_mover['change_pct']}%).")
+            
+            global_summary = " ".join(summary_parts)
+        else:
+            global_summary = "Not enough data for a global summary."
+
+        return jsonify({'insights': insights_list, 'global_summary': global_summary}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/generate-report', methods=['POST'])
+def generate_report():
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
 
-@app.route('/correlations', methods=['POST'])
+        # Create PDF buffer
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        # Title
+        p.setFont("Helvetica-Bold", 24)
+        p.drawString(50, height - 50, "SmartDash AI Report")
+        
+        # Date
+        p.setFont("Helvetica", 12)
+        p.drawString(50, height - 70, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+        # Global Summary
+        y_position = height - 120
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, y_position, "Executive Summary")
+        y_position -= 25
+        
+        p.setFont("Helvetica", 12)
+        summary_text = data.get('global_summary', 'No summary available.')
+        
+        # Simple text wrapping (very basic)
+        words = summary_text.split()
+        line = ""
+        for word in words:
+            if p.stringWidth(line + " " + word, "Helvetica", 12) < 500:
+                line += " " + word
+            else:
+                p.drawString(50, y_position, line.strip())
+                y_position -= 15
+                line = word
+        p.drawString(50, y_position, line.strip())
+        y_position -= 40
+
+        # Insights
+        if 'insights' in data and data['insights']:
+            p.setFont("Helvetica-Bold", 16)
+            p.drawString(50, y_position, "Key Insights")
+            y_position -= 25
+            p.setFont("Helvetica", 12)
+
+            for insight in data['insights']:
+                if y_position < 50: # New page
+                    p.showPage()
+                    y_position = height - 50
+                
+                cat = insight.get('category', 'Unknown')
+                msg = insight.get('message', '')
+                trend = insight.get('trend', '')
+                
+                # Bullet point
+                p.setFont("Helvetica-Bold", 12)
+                p.drawString(50, y_position, f"• {cat} ({trend.upper()})")
+                y_position -= 15
+                p.setFont("Helvetica", 10)
+                p.drawString(70, y_position, msg)
+                y_position -= 25
+
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+
+        return send_file(buffer, as_attachment=True, download_name='smart_dash_report.pdf', mimetype='application/pdf')
+
+    except Exception as e:
+        print(f"Report Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/correlations', methods=['GET'])
 def correlations():
     """
     Analyzes cross-category correlations.
@@ -321,6 +427,53 @@ def correlations():
         results.sort(key=lambda x: abs(x['correlation']), reverse=True)
 
         return jsonify({'correlations': results}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/simulate', methods=['POST'])
+def simulate():
+    """
+    Receives data points and a growth multiplier, returns original predictions
+    alongside multiplied projected predictions for What-If analysis.
+    """
+    try:
+        body = request.get_json()
+        data_points = body.get('data', [])
+        multiplier = float(body.get('multiplier', 1.0))
+
+        if len(data_points) < 2:
+            return jsonify({'error': 'Need at least 2 data points'}), 400
+
+        values = [point['value'] for point in data_points]
+        X = np.arange(len(values)).reshape(-1, 1)
+        y = np.array(values, dtype=float)
+
+        model = LinearRegression()
+        model.fit(X, y)
+
+        # Predict next 6 periods
+        future_X = np.arange(len(values), len(values) + 6).reshape(-1, 1)
+        base_predictions = model.predict(future_X)
+
+        result = {
+            'original': [
+                {'label': f'Prediction {i+1}', 'value': round(float(p), 2), 'index': len(values) + i}
+                for i, p in enumerate(base_predictions)
+            ],
+            'projected': [
+                {'label': f'Prediction {i+1}', 'value': round(float(p * multiplier), 2), 'index': len(values) + i}
+                for i, p in enumerate(base_predictions)
+            ],
+            'multiplier': multiplier,
+            'model': {
+                'type': 'Linear Regression',
+                'accuracy': round(float(model.score(X, y) * 100), 2),
+                'slope': round(float(model.coef_[0]), 2)
+            }
+        }
+        return jsonify(result), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -456,6 +609,7 @@ def health():
 
 if __name__ == '__main__':
     import os
+    # Force reload comment
     port = int(os.environ.get('PORT', 5001))
     print(f"🧠 AI Engine running on http://0.0.0.0:{port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)
