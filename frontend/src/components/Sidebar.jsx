@@ -1,8 +1,8 @@
-import { useState } from 'react';
+// import { useState } from 'react'; // Removed unused import
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, PlusCircle, BrainCircuit, LogOut,
-    ChevronLeft, ChevronRight, UserCircle, List, Code2
+    UserCircle, List, Code2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
