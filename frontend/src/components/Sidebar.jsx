@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function Sidebar() {
-    const [collapsed, setCollapsed] = useState(false);
+export default function Sidebar({ collapsed }) {
+    // const [collapsed, setCollapsed] = useState(false); // Removed local state
     const navigate = useNavigate();
     const { user, logout } = useAuth();
 
@@ -31,17 +31,8 @@ export default function Sidebar() {
             bg-dark-800 border-r border-dark-600/50
             transition-all duration-300 ease-in-out`}
         >
-            {/* Logo + Toggle */}
-            <div className="flex items-center gap-3 px-4 h-16 border-b border-dark-600/50">
-                <button
-                    onClick={() => setCollapsed(!collapsed)}
-                    className="flex items-center justify-center p-1.5 rounded-lg
-                    text-slate-500 hover:text-white hover:bg-dark-700
-                    transition-all duration-200 cursor-pointer mr-1"
-                >
-                    {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-                </button>
-
+            {/* Logo area - Toggle moved to Navbar */}
+            <div className="flex items-center gap-3 px-4 h-16 border-b border-dark-600/50 justify-center">
                 <div className="w-9 h-9 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     <img src="/logo192.png" alt="Logo" className="w-full h-full object-cover" />
                 </div>

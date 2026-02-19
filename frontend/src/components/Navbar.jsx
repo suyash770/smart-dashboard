@@ -3,98 +3,25 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Trash2, Settings, Plus, X, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 
-const Navbar = () => {
-    const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [showAlertsModal, setShowAlertsModal] = useState(false);
-    const dropdownRef = useRef(null);
-
-    // Alerts State
-    const [alerts, setAlerts] = useState([]);
-    const [newAlert, setNewAlert] = useState({ category: 'Revenue', condition: 'lt', threshold: '' });
-    const [categories, setCategories] = useState([]);
-
-    // Fetch Notifications
-    const fetchNotifications = async () => {
-        try {
-            const res = await api.get('/alerts/notifications');
-            setNotifications(res.data);
-            setUnreadCount(res.data.filter(n => !n.read).length);
-        } catch (err) {
-            console.error('Failed to fetch notifications', err);
-        }
-    };
-
-    // Fetch Alerts & Categories
-    const fetchAlertsData = async () => {
-        try {
-            const [alertsRes, catsRes] = await Promise.all([
-                api.get('/alerts'),
-                api.get('/data/categories')
-            ]);
-            setAlerts(alertsRes.data);
-            setCategories(catsRes.data);
-            if (catsRes.data.length > 0 && !newAlert.category) {
-                setNewAlert(prev => ({ ...prev, category: catsRes.data[0] }));
-            }
-        } catch (err) {
-            console.error('Failed to fetch alerts data', err);
-        }
-    };
-
-    useEffect(() => {
-        fetchNotifications();
-        // Poll for notifications every 30s
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setShowDropdown(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const markAsRead = async (id) => {
-        try {
-            await api.put(`/alerts/notifications/${id}/read`);
-            setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
-            setUnreadCount(prev => Math.max(0, prev - 1));
-        } catch (err) {
-            console.error('Failed to mark as read', err);
-        }
-    };
-
-    const deleteAlert = async (id) => {
-        try {
-            await api.delete(`/alerts/${id}`);
-            setAlerts(prev => prev.filter(a => a._id !== id));
-        } catch (err) {
-            console.error('Failed to delete alert', err);
-        }
-    };
-
-    const createAlert = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await api.post('/alerts', newAlert);
-            setAlerts([...alerts, res.data]);
-            setNewAlert({ ...newAlert, threshold: '' });
-        } catch (err) {
-            alert('Failed to create alert');
-        }
-    };
+const Navbar = ({ onToggleSidebar, collapsed }) => {
+    // ... existing ...
 
     return (
         <div className="h-16 px-8 flex items-center justify-between bg-dark-900 border-b border-white/5 sticky top-0 z-40 backdrop-blur-md bg-dark-900/80">
-            {/* Left side (Breadcrumbs or Page Title - Optional) */}
-            <div></div>
+            {/* Left side: Toggle Button */}
+            <div className="flex items-center">
+                <button
+                    onClick={onToggleSidebar}
+                    className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors hover:bg-white/5 rounded-lg"
+                    title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
 
             {/* Right side icons */}
             <div className="flex items-center gap-4">

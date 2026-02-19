@@ -53,17 +53,36 @@ const InsightCard = ({ insight }) => {
 
 const CorrelationCard = ({ correlation }) => {
     return (
-        <div className="p-3 rounded-lg bg-dark-800/50 border border-white/5 flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-                <span className="text-slate-300">{correlation.from}</span>
-                <span className="text-slate-500">→</span>
-                <span className="text-slate-300">{correlation.to}</span>
+        <div className="p-4 rounded-xl bg-dark-800/50 border border-white/5 hover:bg-dark-800 transition-all group">
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${correlation.correlation > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                        {correlation.correlation > 0 ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-white font-medium">{correlation.from}</span>
+                            <span className="text-slate-500 text-xs">linked to</span>
+                            <span className="text-white font-medium">{correlation.to}</span>
+                        </div>
+                        <p className="text-sm text-slate-300 leading-snug max-w-md">
+                            {correlation.message || `Strong ${correlation.direction} correlation detected.`}
+                        </p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <span className={`text-lg font-bold ${correlation.correlation > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {correlation.correlation > 0 ? '+' : ''}{correlation.correlation}
+                    </span>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{correlation.strength}</p>
+                </div>
             </div>
-            <div className="flex flex-col items-end">
-                <span className={`font-bold ${correlation.correlation > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {correlation.correlation > 0 ? '+' : ''}{correlation.correlation}
-                </span>
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider">{correlation.strength}</span>
+            {/* Visual impact bar */}
+            <div className="mt-3 h-1.5 w-full bg-dark-900 rounded-full overflow-hidden">
+                <div
+                    className={`h-full rounded-full ${correlation.correlation > 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                    style={{ width: `${Math.abs(correlation.correlation) * 100}%` }}
+                />
             </div>
         </div>
     );
