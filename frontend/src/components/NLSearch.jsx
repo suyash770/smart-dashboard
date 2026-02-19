@@ -6,7 +6,7 @@ export default function NLSearch({ onSearch, categories = [] }) {
     const [parsedIntent, setParsedIntent] = useState(null);
 
     // Simple Regex Parser
-    const parseQuery = (text) => {
+    const parseQuery = React.useCallback((text) => {
         if (!text) return null;
         const lower = text.toLowerCase();
         let intent = { category: null, valueOp: null, value: null, dateRange: null };
@@ -37,12 +37,12 @@ export default function NLSearch({ onSearch, categories = [] }) {
         if (lower.includes('last year') || lower.includes('year')) intent.dateRange = '90d'; // Mapping to existing 90d or custom
 
         return intent;
-    };
+    }, [categories]);
 
     useEffect(() => {
         const intent = parseQuery(query);
         setParsedIntent(intent);
-    }, [query]);
+    }, [query, parseQuery]);
 
     const handleSubmit = (e) => {
         e.preventDefault();

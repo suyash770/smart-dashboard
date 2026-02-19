@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
     Database, FolderOpen, TrendingUp, Activity, Loader2,
-    ArrowUpRight, ArrowDownRight, CalendarDays, ChevronDown
+    ArrowUpRight, CalendarDays, ChevronDown
 } from 'lucide-react';
 import {
     AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
@@ -12,19 +12,7 @@ import {
 import AIInsights from '../components/AIInsights';
 import NLSearch from '../components/NLSearch';
 
-const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-        <div className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 shadow-xl">
-            <p className="text-slate-400 text-xs mb-1">{label}</p>
-            {payload.map((entry, i) => (
-                <p key={i} style={{ color: entry.color }} className="text-sm font-semibold">
-                    {entry.value}
-                </p>
-            ))}
-        </div>
-    );
-};
+
 
 // Date range presets
 const DATE_RANGES = [
