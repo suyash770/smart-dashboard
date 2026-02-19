@@ -5,6 +5,7 @@ import {
     LineChart, Line,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
+import ScenarioSimulator from '../components/ScenarioSimulator';
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -20,7 +21,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
 };
 
-import ScenarioSimulator from '../components/ScenarioSimulator';
+
 
 export default function Predictions() {
     const [result, setResult] = useState(null);
