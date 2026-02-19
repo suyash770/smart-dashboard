@@ -2,6 +2,11 @@
 
 Here is the complete story of your project: **What we built, How we built it, and Why.**
 
+> **⚠️ Important Note on Free Tier Hosting:**
+> If you are using Render Free Tier, the server will "sleep" after 15 minutes of inactivity.
+> **Internal Cron Jobs do NOT prevent this.** Render ignores "self-pings".
+> **Solution:** Use an external service like [cron-job.org](https://cron-job.org/) to ping your URL every 10 minutes.
+
 ## 1. The Foundation: MERN Stack Architecture
 **What we did:**
 We set up a robust 3-tier architecture:

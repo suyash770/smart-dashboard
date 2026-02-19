@@ -18,14 +18,22 @@ import './index.css';
 // Protected route wrapper
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-dark-900 text-white">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+    </div>
+  );
   return user ? children : <Navigate to="/" />;
 }
 
 // Redirect if already logged in
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-dark-900 text-white">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+    </div>
+  );
   return user ? <Navigate to="/dashboard" /> : children;
 }
 
