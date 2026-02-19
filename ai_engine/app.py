@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from sklearn.linear_model import LinearRegression
 import numpy as np
-import joblib
 import os
 import io
 import re
@@ -105,10 +104,7 @@ def predict():
         model = LinearRegression()
         model.fit(X, y)
 
-        # Save the model
-        model_path = os.path.join(MODELS_DIR, 'model.pkl')
-        joblib.dump(model, model_path)
-
+        # Generating future predictions
         future_X = np.arange(len(values), len(values) + 3).reshape(-1, 1)
         predictions = model.predict(future_X)
         score = model.score(X, y)
@@ -421,10 +417,6 @@ def predict_from_file():
         model = LinearRegression()
         model.fit(X, y)
 
-        # Save the model
-        model_path = os.path.join(MODELS_DIR, 'model.pkl')
-        joblib.dump(model, model_path)
-
         future_X = np.arange(len(values), len(values) + 3).reshape(-1, 1)
         predictions = model.predict(future_X)
         score = model.score(X, y)
@@ -452,6 +444,10 @@ def predict_from_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({'status': 'ok', 'message': 'SmartDash AI Engine is Ready 🚀'}), 200
 
 @app.route('/health', methods=['GET'])
 def health():

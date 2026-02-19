@@ -12,13 +12,13 @@ const FormData = require('form-data');
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Reusable helper: call AI engine (supports http & https via env)
-const callAIEngine = (path, payload) => {
-    return new Promise((resolve, reject) => {
-        const aiUrl = process.env.AI_ENGINE_URL || 'http://127.0.0.1:5001';
-        const url = new URL(path, aiUrl);
-        const isHttps = url.protocol === 'https:';
-        const lib = require(isHttps ? 'https' : 'http');
+const callAIEngine = async (path, payload, retries = 2) => {
+    const aiUrl = process.env.AI_ENGINE_URL || 'http://127.0.0.1:5001';
+    const url = new URL(path, aiUrl);
+    const isHttps = url.protocol === 'https:';
+    const lib = require(isHttps ? 'https' : 'http');
 
+    const makeRequest = () => new Promise((resolve, reject) => {
         const aiReq = lib.request({
             hostname: url.hostname,
             port: url.port || (isHttps ? 443 : 80),
@@ -27,7 +27,8 @@ const callAIEngine = (path, payload) => {
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(payload)
-            }
+            },
+            timeout: 50000 // 50s timeout for cold starts
         }, (aiRes) => {
             let body = '';
             aiRes.on('data', chunk => body += chunk);
@@ -36,17 +37,35 @@ const callAIEngine = (path, payload) => {
                     resolve(JSON.parse(body));
                 } else {
                     try {
-                        reject(new Error(JSON.parse(body).error || 'AI Engine error'));
+                        const errBody = JSON.parse(body);
+                        reject(new Error(errBody.error || `AI Engine error: ${aiRes.statusCode}`));
                     } catch {
-                        reject(new Error('AI Engine error'));
+                        reject(new Error(`AI Engine error: ${aiRes.statusCode}`));
                     }
                 }
             });
         });
-        aiReq.on('error', () => reject(new Error('AI Engine is not running')));
+
+        aiReq.on('error', (err) => reject(err));
+        aiReq.on('timeout', () => {
+            aiReq.destroy();
+            reject(new Error('AI Engine timed out'));
+        });
+
         aiReq.write(payload);
         aiReq.end();
     });
+
+    for (let i = 0; i <= retries; i++) {
+        try {
+            return await makeRequest();
+        } catch (err) {
+            console.log(`⚠️ AI Attempt ${i + 1} failed: ${err.message}`);
+            if (i === retries) throw err;
+            // Wait 2 seconds before retry
+            await new Promise(res => setTimeout(res, 2000));
+        }
+    }
 };
 
 // GET all data (for the logged-in user)
