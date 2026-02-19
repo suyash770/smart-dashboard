@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+    // Use relative path '/api' so Vercel proxies it to Render
+    // This makes cookies "First Party" and fixes mobile login
+    baseURL: '/api',
     withCredentials: true // Send cookies with requests
 });
 
