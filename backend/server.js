@@ -16,7 +16,8 @@ app.use(cors({
 
         const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:3000'];
         // Normalize origin (remove trailing slash) check
-        const isAllowed = allowedOrigins.some(allowed => allowed && (allowed === origin || allowed.replace(/\/$/, '') === origin.replace(/\/$/, '')));
+        const isAllowed = allowedOrigins.some(allowed => allowed && (allowed === origin || allowed.replace(/\/$/, '') === origin.replace(/\/$/, '')))
+            || (origin && origin.endsWith('.vercel.app')); // Allow all Vercel preview deployments
 
         if (isAllowed) {
             callback(null, true);
