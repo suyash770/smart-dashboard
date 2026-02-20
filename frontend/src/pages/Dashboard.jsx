@@ -35,7 +35,8 @@ export default function Dashboard() {
     const [showDateDropdown, setShowDateDropdown] = useState(false);
 
     // Drill-down: 'overview' (monthly/agg) vs 'detail' (daily)
-    const [viewMode, setViewMode] = useState('overview');
+    // viewType: 'bar' (Monthly) | 'line' (Daily)
+    const [viewType, setViewType] = useState('bar');
     const [selectedMonth, setSelectedMonth] = useState(null);
     const [activeCategory, setActiveCategory] = useState(null);
 
@@ -145,18 +146,24 @@ export default function Dashboard() {
         return result;
     }, [filteredData]);
 
-    // 3. Daily Data (For Drill-down)
+    // 3. Daily Data (For Drill-down OR Line View)
     const dailyData = useMemo(() => {
-        if (!selectedMonth) return [];
-        return filteredData.filter(d => {
-            const date = new Date(d.date);
-            const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
-            return monthKey === selectedMonth;
-        }).sort((a, b) => new Date(a.date) - new Date(b.date))
+        // If drilling down to a specific month, filter by that month
+        let sourceData = filteredData;
+        if (selectedMonth) {
+            sourceData = filteredData.filter(d => {
+                const date = new Date(d.date);
+                const monthKey = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+                return monthKey === selectedMonth;
+            });
+        }
+
+        return sourceData.sort((a, b) => new Date(a.date) - new Date(b.date))
             .map(d => ({
                 ...d,
                 day: new Date(d.date).getDate(), // Just the day number
-                fullDate: new Date(d.date).toLocaleDateString()
+                fullDate: new Date(d.date).toLocaleDateString(),
+                displayLabel: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
             }));
     }, [filteredData, selectedMonth]);
 
@@ -165,7 +172,7 @@ export default function Dashboard() {
         if (data && data.activePayload && data.activePayload.length > 0) {
             const month = data.activePayload[0].payload.name;
             setSelectedMonth(month);
-            setViewMode('detail');
+            setViewType('line');
         }
     };
 
@@ -241,11 +248,11 @@ export default function Dashboard() {
                 {/* Filter Controls */}
                 <div className="flex items-center gap-2">
                     {/* Reset Active Filter */}
-                    {(activeCategory || viewMode === 'detail' || valueFilter) && (
+                    {(activeCategory || selectedMonth || valueFilter) && (
                         <button
                             onClick={() => {
                                 setActiveCategory(null);
-                                setViewMode('overview');
+                                setViewType('bar');
                                 setSelectedMonth(null);
                                 setValueFilter(null);
                                 setFilterCategory('All');
@@ -344,32 +351,42 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                            {viewMode === 'overview' ? 'Monthly Overview' : `Daily Breakdown: ${selectedMonth}`}
-                            {viewMode === 'detail' && (
+                            {viewType === 'bar' ? 'Monthly Overview' : selectedMonth ? `Daily Breakdown: ${selectedMonth}` : 'Daily Trend'}
+                            {selectedMonth && (
                                 <span className="text-xs font-normal text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
                                     Drilled Down
                                 </span>
                             )}
                         </h2>
                         <p className="text-sm text-slate-400">
-                            {viewMode === 'overview'
-                                ? 'Click on a bar to see daily details.'
-                                : `Showing daily performance for ${selectedMonth}.`}
+                            {viewType === 'bar'
+                                ? 'Monthly aggregated performance.'
+                                : `Daily performance trends${selectedMonth ? ` for ${selectedMonth}` : ''}.`}
                         </p>
                     </div>
-                    {viewMode === 'detail' && (
-                        <button
-                            onClick={() => { setViewMode('overview'); setSelectedMonth(null); }}
-                            className="text-xs bg-dark-700 hover:bg-dark-600 text-white px-3 py-1.5 rounded-lg transition-colors border border-dark-500"
-                        >
-                            Back to Overview
-                        </button>
-                    )}
+
+                    <div className="flex items-center gap-2">
+                        {/* View Toggle */}
+                        <div className="bg-dark-700/50 p-1 rounded-lg border border-dark-600/30 flex text-xs">
+                            <button
+                                onClick={() => { setViewType('bar'); setSelectedMonth(null); }}
+                                className={`px-3 py-1 rounded-md transition-all ${viewType === 'bar' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                Bar
+                            </button>
+                            <button
+                                onClick={() => setViewType('line')}
+                                className={`px-3 py-1 rounded-md transition-all ${viewType === 'line' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                Line
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        {viewMode === 'overview' ? (
+                        {viewType === 'bar' ? (
                             <BarChart data={monthlyData} onClick={handleMonthClick} className="cursor-pointer">
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.2)" vertical={false} />
                                 <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -411,7 +428,7 @@ export default function Dashboard() {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.2)" vertical={false} />
-                                <XAxis dataKey="day" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} label={{ value: 'Day', position: 'insideBottomRight', offset: -5 }} />
+                                <XAxis dataKey="displayLabel" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} label={{ value: 'Day', position: 'insideBottomRight', offset: -5 }} />
                                 <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatCompactNumber} />
                                 <Tooltip content={({ active, payload, label }) => {
                                     if (!active || !payload?.length) return null;
