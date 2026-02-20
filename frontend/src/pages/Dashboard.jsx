@@ -236,8 +236,13 @@ export default function Dashboard() {
     // We already imported Recharts components at top
 
     return (
-        <div className="animate-fade-in pb-12">
-            <div className="flex items-center justify-between mb-8">
+        <div className="animate-fade-in pb-12 relative min-h-screen overflow-hidden">
+            {/* Background Neon Orbs */}
+            <div className="neon-orb w-[500px] h-[500px] bg-indigo-600/20 top-[-100px] left-[-100px]" />
+            <div className="neon-orb w-[400px] h-[400px] bg-purple-600/20 bottom-[10%] right-[-50px]" />
+            <div className="neon-orb w-[300px] h-[300px] bg-emerald-500/10 top-[40%] left-[20%]" />
+
+            <div className="flex items-center justify-between mb-8 relative z-10">
                 <div>
                     <h1 className="text-2xl font-bold text-white mb-1">Dashboard</h1>
                     <p className="text-slate-400 text-sm">
@@ -497,12 +502,34 @@ export default function Dashboard() {
                                             </linearGradient>
                                         </defs>
                                         <Tooltip
+                                            cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
                                             content={({ active, payload, label }) => {
                                                 if (!active || !payload?.length) return null;
+                                                const currentVal = payload[0].value;
+                                                // Find previous data point for "dip" calculation
+                                                const currentIndex = sparkLineData.findIndex(d => d.date === label);
+                                                const prevVal = currentIndex > 0 ? sparkLineData[currentIndex - 1].value : currentVal;
+                                                const diff = currentVal - prevVal;
+                                                const pct = prevVal ? ((diff / prevVal) * 100).toFixed(1) : 0;
+
+                                                let insight = "Consistent";
+                                                if (Number(pct) > 10) insight = "🚀 Surge";
+                                                else if (Number(pct) < -10) insight = "📉 Dip";
+                                                else if (Number(pct) > 0) insight = "↗️ Slight Up";
+                                                else if (Number(pct) < 0) insight = "↘️ Slight Down";
+
                                                 return (
-                                                    <div className="bg-dark-900/90 border border-indigo-500/20 rounded px-2 py-1 text-xs shadow-xl backdrop-blur-sm">
-                                                        <span className="text-slate-300">{label}: </span>
-                                                        <span className="text-white font-bold">{formatCompactNumber(payload[0].value)}</span>
+                                                    <div className="bg-dark-900/95 border border-indigo-500/30 rounded-lg p-3 shadow-2xl backdrop-blur-md min-w-[140px]">
+                                                        <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1">{label}</p>
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="text-xl font-bold text-white">{formatCompactNumber(currentVal)}</span>
+                                                            <span className={`text-xs font-bold ${Number(pct) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                {Number(pct) > 0 ? '+' : ''}{pct}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[10px] text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20">
+                                                            {insight} - {new Date().getDay() === 0 || new Date().getDay() === 6 ? 'Weekend Trend' : 'Weekday Trend'}
+                                                        </div>
                                                     </div>
                                                 );
                                             }}
@@ -513,7 +540,7 @@ export default function Dashboard() {
                                             stroke="#6366f1"
                                             strokeWidth={2}
                                             fill={`url(#gradient-${cat})`}
-                                            isAnimationActive={false}
+                                            animationDuration={1000}
                                         />
                                     </AreaChart>
                                 </ResponsiveContainer>
