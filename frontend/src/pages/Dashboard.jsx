@@ -346,6 +346,11 @@ export default function Dashboard() {
                 ))}
             </div>
 
+            {/* AI Insights Panel (Moved from bottom) */}
+            <div className="mb-6">
+                <AIInsights />
+            </div>
+
             {/* Main Interactive Chart Section */}
             <div className="glass-card rounded-xl p-6 mb-6 relative overflow-hidden">
                 <div className="flex items-center justify-between mb-6">
@@ -450,10 +455,75 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* AI Insights Panel */}
-            <div className="mb-6">
-                <AIInsights />
+            {/* Category Breakdown Charts */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                {allCategories.filter(c => c !== 'All').map(cat => {
+                    const catData = filteredData.filter(d => d.category === cat)
+                        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    if (catData.length === 0) return null;
+
+                    // Aggregate by month for smoother mini-charts, or use last 30 days
+                    // Let's use daily data for the sparkline feel, but limited to last 30 entries if too large
+                    const sparkLineData = catData.slice(-30).map(d => ({
+                        date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                        value: d.value
+                    }));
+
+                    const total = catData.reduce((sum, d) => sum + d.value, 0);
+                    const lastValue = catData[catData.length - 1]?.value || 0;
+                    const prevValue = catData[catData.length - 2]?.value || 0;
+                    const trend = prevValue ? ((lastValue - prevValue) / prevValue) * 100 : 0;
+
+                    return (
+                        <div key={cat} className="glass-card rounded-xl p-5 hover:border-indigo-500/30 transition-colors group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{cat}</h3>
+                                    <p className="text-2xl font-bold text-white mt-1">{formatCompactNumber(total)}</p>
+                                </div>
+                                <div className={`px-2 py-1 rounded-md text-xs font-bold ${trend >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                    {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
+                                </div>
+                            </div>
+
+                            <div className="h-[80px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={sparkLineData}>
+                                        <defs>
+                                            <linearGradient id={`gradient-${cat}`} x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+                                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <Tooltip
+                                            content={({ active, payload, label }) => {
+                                                if (!active || !payload?.length) return null;
+                                                return (
+                                                    <div className="bg-dark-900/90 border border-indigo-500/20 rounded px-2 py-1 text-xs shadow-xl backdrop-blur-sm">
+                                                        <span className="text-slate-300">{label}: </span>
+                                                        <span className="text-white font-bold">{formatCompactNumber(payload[0].value)}</span>
+                                                    </div>
+                                                );
+                                            }}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="value"
+                                            stroke="#6366f1"
+                                            strokeWidth={2}
+                                            fill={`url(#gradient-${cat})`}
+                                            isAnimationActive={false}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
+
+
         </div>
     );
 }
