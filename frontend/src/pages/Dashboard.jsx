@@ -352,7 +352,14 @@ export default function Dashboard() {
             </div>
 
             {/* AI Insights Panel (Moved from bottom) */}
-            <div className="mb-6">
+            <div className="mb-6 relative">
+                <div className="absolute top-0 right-0 p-4 z-20 flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">Live Analysis Active</span>
+                </div>
                 <AIInsights />
             </div>
 
@@ -433,7 +440,7 @@ export default function Dashboard() {
                             <AreaChart data={dailyData}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.5} />
                                         <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
