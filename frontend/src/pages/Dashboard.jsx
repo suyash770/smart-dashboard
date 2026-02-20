@@ -239,8 +239,8 @@ export default function Dashboard() {
         <div className="animate-fade-in pb-12 relative min-h-screen overflow-hidden">
             {/* Background Neon Orbs */}
             <div className="neon-orb w-[500px] h-[500px] bg-indigo-600/20 top-[-100px] left-[-100px]" />
-            <div className="neon-orb w-[400px] h-[400px] bg-purple-600/20 bottom-[10%] right-[-50px]" />
-            <div className="neon-orb w-[300px] h-[300px] bg-emerald-500/10 top-[40%] left-[20%]" />
+            <div className="neon-orb w-[400px] h-[400px] bg-blue-600/10 bottom-[10%] right-[-50px]" />
+            <div className="neon-orb w-[300px] h-[300px] bg-slate-500/10 top-[40%] left-[20%]" />
 
             <div className="flex items-center justify-between mb-8 relative z-10">
                 <div>
@@ -412,7 +412,7 @@ export default function Dashboard() {
                                                 <div className="flex items-end gap-2">
                                                     <span className="text-2xl font-bold text-white">{formatCompactNumber(data.value)}</span>
                                                     {data.growth !== 0 && (
-                                                        <span className={`text-xs font-bold mb-1 ${Number(data.growth) > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                        <span className={`text-xs font-bold mb-1 ${Number(data.growth) > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                                             {Number(data.growth) > 0 ? '+' : ''}{data.growth}%
                                                         </span>
                                                     )}
@@ -487,7 +487,7 @@ export default function Dashboard() {
                                     <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{cat}</h3>
                                     <p className="text-2xl font-bold text-white mt-1">{formatCompactNumber(total)}</p>
                                 </div>
-                                <div className={`px-2 py-1 rounded-md text-xs font-bold ${trend >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                <div className={`px-2 py-1 rounded-md text-xs font-bold ${trend >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                                     {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
                                 </div>
                             </div>
@@ -523,7 +523,7 @@ export default function Dashboard() {
                                                         <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1">{label}</p>
                                                         <div className="flex items-center gap-2 mb-2">
                                                             <span className="text-xl font-bold text-white">{formatCompactNumber(currentVal)}</span>
-                                                            <span className={`text-xs font-bold ${Number(pct) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                            <span className={`text-xs font-bold ${Number(pct) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                                                 {Number(pct) > 0 ? '+' : ''}{pct}%
                                                             </span>
                                                         </div>
