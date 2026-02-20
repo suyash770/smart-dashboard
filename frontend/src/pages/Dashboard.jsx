@@ -252,6 +252,14 @@ export default function Dashboard() {
 
                 {/* Filter Controls */}
                 <div className="flex items-center gap-2">
+                    {/* Live Analysis Active Indicator (Moved here) */}
+                    <div className="flex items-center gap-2 mr-4 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">Live Analysis</span>
+                    </div>
                     {/* Reset Active Filter */}
                     {(activeCategory || selectedMonth || valueFilter) && (
                         <button
