@@ -351,9 +351,10 @@ export default function Dashboard() {
                     </div>
                 ))}
             </div>
-
-
-
+            {/* AI Insights Panel */}
+            <div className="mb-6">
+                <AIInsights />
+            </div>
             {/* Main Interactive Chart Section */}
             <div className="glass-card rounded-xl p-6 mb-6 relative overflow-hidden">
                 <div className="flex items-center justify-between mb-6">
