@@ -54,24 +54,34 @@ export default function ScenarioSimulator() {
         setHasCelebrated(false);
     }, [targetGoal, selectedCategory]);
 
+    // Track previous loading state to detect when a simulation finishes
+    const [prevLoading, setPrevLoading] = useState(false);
+
     // Trigger Confetti when goal is reached via simulation
     useEffect(() => {
-        if (!simulationData || !targetGoal) return;
-
-        const projectedValue = simulationData.projected && simulationData.projected[0] ? simulationData.projected[0].value : 0;
-        const goal = parseFloat(targetGoal);
-
-        // If goal met and haven't celebrated yet
-        if (projectedValue >= goal && !hasCelebrated && goal > 0) {
-            confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#6366f1', '#22c55e', '#f59e0b', '#ffffff']
-            });
-            setHasCelebrated(true);
+        if (loading) {
+            setPrevLoading(true);
+            return;
         }
-    }, [simulationData, targetGoal, hasCelebrated]);
+
+        // Only check for celebration if we just finished loading
+        if (prevLoading && !loading && simulationData && targetGoal) {
+            const projectedValue = simulationData.projected && simulationData.projected[0] ? simulationData.projected[0].value : 0;
+            const goal = parseFloat(targetGoal);
+
+            // If goal met and haven't celebrated yet
+            if (projectedValue >= goal && !hasCelebrated && goal > 0) {
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#6366f1', '#22c55e', '#f59e0b', '#ffffff']
+                });
+                setHasCelebrated(true);
+            }
+            setPrevLoading(false);
+        }
+    }, [loading, simulationData, targetGoal, hasCelebrated, prevLoading]);
 
     // calculate goal
     const calculateGoalRequirement = () => {

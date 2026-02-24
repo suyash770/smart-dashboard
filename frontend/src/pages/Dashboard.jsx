@@ -252,14 +252,7 @@ export default function Dashboard() {
 
                 {/* Filter Controls */}
                 <div className="flex items-center gap-2">
-                    {/* Live Analysis Active Indicator (Moved here) */}
-                    <div className="flex items-center gap-2 mr-4 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">Live Analysis</span>
-                    </div>
+
                     {/* Reset Active Filter */}
                     {(activeCategory || selectedMonth || valueFilter) && (
                         <button
@@ -359,17 +352,7 @@ export default function Dashboard() {
                 ))}
             </div>
 
-            {/* AI Insights Panel (Moved from bottom) */}
-            {/* <div className="mb-6 relative">
-                <div className="absolute top-0 right-0 p-4 z-20 flex items-center gap-2">
-                    <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">Live Analysis Active</span>
-                </div>
-                <AIInsights />
-            </div> */}
+
 
             {/* Main Interactive Chart Section */}
             <div className="glass-card rounded-xl p-6 mb-6 relative overflow-hidden">

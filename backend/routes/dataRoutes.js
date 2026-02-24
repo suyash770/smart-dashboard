@@ -317,19 +317,37 @@ router.get('/correlations', protect, async (req, res) => {
 router.post('/generate-report', protect, async (req, res) => {
     try {
         const aiUrl = process.env.AI_ENGINE_URL || 'http://127.0.0.1:5001';
+        console.log(`📡 Requesting report from AI Engine: ${aiUrl}/generate-report`);
 
         // Forward request to AI Engine
         const response = await axios.post(`${aiUrl}/generate-report`, req.body, {
-            responseType: 'stream'
+            responseType: 'stream',
+            timeout: 60000 // 60s for PDF generation
         });
 
         // Pipe PDF back to client
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'attachment; filename=smart_dash_report.pdf');
         response.data.pipe(res);
+
+        response.data.on('end', () => console.log('✅ Report streamed successfully'));
+        response.data.on('error', (err) => {
+            console.error('❌ Error streaming from AI Engine:', err.message);
+            if (!res.headersSent) res.status(500).json({ message: "Streaming error" });
+        });
+
     } catch (err) {
-        console.error("Report Proxy Error:", err.message);
-        res.status(500).json({ message: "Failed to generate report" });
+        console.error("❌ Report Proxy Error:", err.message);
+        if (err.response) {
+            console.error("AI Engine Response Data:", err.response.data);
+            try {
+                // If it's a stream, we might need to read it to log the error
+                // but usually axios transforms it if we don't handle it.
+                // For now, just log the status.
+                console.error("Status:", err.response.status);
+            } catch (e) { }
+        }
+        res.status(500).json({ message: "Failed to generate report. Ensure AI Engine is running." });
     }
 });
 
