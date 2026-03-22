@@ -37,7 +37,8 @@ export default function ScenarioSimulator() {
                 setError(null);
             } catch (err) {
                 console.error(err);
-                setError('Failed to run simulation. Ensure you have enough data.');
+                const apiError = err.response?.data?.message || 'Failed to run simulation.';
+                setError(apiError);
                 setSimulationData(null);
             } finally {
                 setLoading(false);
