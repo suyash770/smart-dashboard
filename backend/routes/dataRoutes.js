@@ -17,7 +17,7 @@ let isProcessingQueue = false;
 
 // Simple in-memory cache
 const aiCache = new Map();
-const CACHE_TTL_MS = 60000; // 60 seconds
+const CACHE_TTL_MS = 300000; // 5 minutes
 
 // Process the queue sequentially
 const processQueue = async () => {
@@ -33,14 +33,14 @@ const processQueue = async () => {
             reject(err);
         }
         // Small delay between requests to be safe from rate limits
-        await new Promise(res => setTimeout(res, 500));
+        await new Promise(res => setTimeout(res, 1500));
     }
 
     isProcessingQueue = false;
 };
 
 // Core logic to call the AI Engine
-const executeAIEngineCall = async (path, payload, retries = 2) => {
+const executeAIEngineCall = async (path, payload, retries = 3) => {
     const aiUrl = process.env.AI_ENGINE_URL || 'http://127.0.0.1:5001';
     const url = new URL(path, aiUrl);
     const isHttps = url.protocol === 'https:';
@@ -90,15 +90,15 @@ const executeAIEngineCall = async (path, payload, retries = 2) => {
         } catch (err) {
             console.log(`⚠️ AI Attempt ${i + 1} failed: ${err.message}`);
             if (i === retries) throw err;
-            // Wait longer if hitting 429
-            const delay = err.message.includes('429') ? 4000 : 2000;
+            // Wait longer if hitting 429 (incremental backoff)
+            const delay = err.message.includes('429') ? 4000 + i * 2000 : 2000;
             await new Promise(res => setTimeout(res, delay));
         }
     }
 };
 
 // Queue wrapper with caching
-const callAIEngine = (path, payload, retries = 2) => {
+const callAIEngine = (path, payload, retries = 3) => {
     return new Promise((resolve, reject) => {
         const cacheKey = `${path}::${payload}`;
         
