@@ -54,7 +54,8 @@ const executeAIEngineCall = async (path, payload, retries = 3) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(payload)
+                'Content-Length': Buffer.byteLength(payload),
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             },
             timeout: 50000 // 50s timeout for cold starts
         }, (aiRes) => {
@@ -239,7 +240,8 @@ router.post('/predict/upload', protect, upload.single('file'), async (req, res) 
         // Send to AI Engine
         const aiResponse = await axios.post(`${aiUrl}/predict-from-file`, form, {
             headers: {
-                ...form.getHeaders()
+                ...form.getHeaders(),
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
             }
         });
 
@@ -377,7 +379,10 @@ router.post('/generate-report', protect, async (req, res) => {
         // Forward request to AI Engine
         const response = await axios.post(`${aiUrl}/generate-report`, req.body, {
             responseType: 'stream',
-            timeout: 60000 // 60s for PDF generation
+            timeout: 60000, // 60s for PDF generation
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+            }
         });
 
         // Pipe PDF back to client

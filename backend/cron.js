@@ -8,7 +8,11 @@ const startCronJobs = () => {
         console.log('⏰ Cron Job: Pinging AI Engine to keep it alive...');
         try {
             const aiUrl = process.env.AI_ENGINE_URL || 'http://127.0.0.1:5001';
-            const response = await axios.get(`${aiUrl}/health`);
+            const response = await axios.get(`${aiUrl}/health`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            });
             console.log(`✅ AI Engine Alive: ${response.status} - ${response.data.service}`);
         } catch (error) {
             console.error('❌ AI Engine Ping Failed:', error.message);
