@@ -11,8 +11,36 @@ const FormData = require('form-data');
 // Configure upload (memory storage for proxying)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Reusable helper: call AI engine (supports http & https via env)
-const callAIEngine = async (path, payload, retries = 2) => {
+// Rate limiting / concurrency queue state
+const requestQueue = [];
+let isProcessingQueue = false;
+
+// Simple in-memory cache
+const aiCache = new Map();
+const CACHE_TTL_MS = 60000; // 60 seconds
+
+// Process the queue sequentially
+const processQueue = async () => {
+    if (isProcessingQueue) return;
+    isProcessingQueue = true;
+
+    while (requestQueue.length > 0) {
+        const { path, payload, retries, resolve, reject } = requestQueue.shift();
+        try {
+            const result = await executeAIEngineCall(path, payload, retries);
+            resolve(result);
+        } catch (err) {
+            reject(err);
+        }
+        // Small delay between requests to be safe from rate limits
+        await new Promise(res => setTimeout(res, 500));
+    }
+
+    isProcessingQueue = false;
+};
+
+// Core logic to call the AI Engine
+const executeAIEngineCall = async (path, payload, retries = 2) => {
     const aiUrl = process.env.AI_ENGINE_URL || 'http://127.0.0.1:5001';
     const url = new URL(path, aiUrl);
     const isHttps = url.protocol === 'https:';
@@ -62,10 +90,37 @@ const callAIEngine = async (path, payload, retries = 2) => {
         } catch (err) {
             console.log(`⚠️ AI Attempt ${i + 1} failed: ${err.message}`);
             if (i === retries) throw err;
-            // Wait 2 seconds before retry
-            await new Promise(res => setTimeout(res, 2000));
+            // Wait longer if hitting 429
+            const delay = err.message.includes('429') ? 4000 : 2000;
+            await new Promise(res => setTimeout(res, delay));
         }
     }
+};
+
+// Queue wrapper with caching
+const callAIEngine = (path, payload, retries = 2) => {
+    return new Promise((resolve, reject) => {
+        const cacheKey = `${path}::${payload}`;
+        
+        // Check cache
+        if (aiCache.has(cacheKey)) {
+            const cached = aiCache.get(cacheKey);
+            if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                return resolve(cached.data);
+            } else {
+                aiCache.delete(cacheKey); // Expired
+            }
+        }
+        
+        // Intercept resolve to inject into cache
+        const customResolve = (data) => {
+            aiCache.set(cacheKey, { data, timestamp: Date.now() });
+            resolve(data);
+        };
+
+        requestQueue.push({ path, payload, retries, resolve: customResolve, reject });
+        processQueue();
+    });
 };
 
 // GET all data (for the logged-in user)
